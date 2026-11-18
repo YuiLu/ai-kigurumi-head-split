@@ -1,0 +1,71 @@
+/* Reference roles are part of the generation request, in upload order. */
+const referenceResponsibilities = {
+  结构参考:
+    "确定角色身份、头脸比例、发型、耳朵、饰品位置和前后结构。其眼睛开合、眉毛和嘴型不能覆盖指定的表情参考。",
+  表情参考:
+    "决定目标眉形、左右眼各自的开合、眼睑曲线、视线、嘴型和情绪。表情发生冲突时，优先于结构图、配色图和上一步结果中的表情。",
+  角色配色: "确定头发、虹膜、饰品和角色配色，不用于覆盖指定表情或重设计结构。",
+  头部主参考:
+    "确定同一角色的头部、发型和面部结构，指定的表情参考可覆盖其表情。",
+  头壳主参考: "确定同一头壳的结构、五官与发型，指定的表情参考可覆盖其表情。",
+  头壳风格: "仅提供头壳的造型语言、材质与制作方式，不替换角色身份或目标表情。",
+  商品摄影风格: "仅提供商品摄影、背景、材质与灯光，不替换角色身份或目标表情。",
+  成品主参考: "确定待提取部件所属的同一成品、颜色、结构和材质。",
+  部件细节: "补充目标部件细节，不把其他部件一起带入输出。",
+};
+
+function describeReference(source, index) {
+  const role = source.role || "结构参考";
+  const purpose =
+    referenceResponsibilities[role] ||
+    "作为上一步选中的主要设计依据，保持其身份和结构；另有表情参考时以表情参考为准。";
+  return `上传图 ${index + 1}「${source.name}」【${role}】\n${purpose}`;
+}
+
+function buildGenerationPrompt(entry, step, sources) {
+  const expressionSources = sources.flatMap((source, index) =>
+    source.role === "表情参考" ? [`上传图 ${index + 1}`] : [],
+  );
+  const sections = [
+    "【本次输入图片与用途】\n以下编号严格对应实际上传图片顺序。图片用途只作用于该图片被指定的维度，不得把多张图的表情平均混合。\n" +
+      sources.map(describeReference).join("\n\n"),
+  ];
+  if (expressionSources.length) {
+    sections.push(
+      `【表情来源与冲突优先级】\n目标表情只从 ${expressionSources.join("、")} 读取。用户明确填写的眼睛状态和表情要求优先，其次为表情参考，最后才是其他参考图中的表情。后文“原本表情”“同一表情”均指这个目标表情，不是结构图的默认表情。\n先分别识别角色左眼、右眼的开合、眉毛角度、眼睑弧线、嘴角与嘴唇形状，再保持这组表情状态。参考中一眼闭合时，闭眼必须是无虹膜、无瞳孔的闭合眼睑线，不能变成半睁眼或露出虹膜的眯眼。保留另一只眼原有的开合程度，不能把两眼自动对称化。不要默认改成双眼睁开、双眼闭合或普通微笑。只提取脸部表情，忽略参考中的手、身体姿势、背景和遮挡。`,
+    );
+  }
+  if (step === 1) {
+    const expression = entry.expression || {};
+    const eyeState = {
+      open: "睁开，保留可见虹膜与瞳孔",
+      closed: "完全闭合，只画闭合眼睑线，不露虹膜或瞳孔",
+    };
+    const locks = [];
+    if (eyeState[expression.viewerLeftEye])
+      locks.push(
+        `正面画面左侧的眼睛＝角色自身右眼：${eyeState[expression.viewerLeftEye]}。`,
+      );
+    if (eyeState[expression.viewerRightEye])
+      locks.push(
+        `正面画面右侧的眼睛＝角色自身左眼：${eyeState[expression.viewerRightEye]}。`,
+      );
+    if (expression.details?.trim()) locks.push(expression.details.trim());
+    if (locks.length)
+      sections.push("【用户表情锁定，必须满足】\n" + locks.join("\n"));
+    sections.push(
+      "【输出排版】\n" +
+        (/^\d+x\d+$/.test(entry.size || "")
+          ? `画布为 ${entry.size.replace("x", "×")} 像素。`
+          : "") +
+        "一张图内采用 2×2 四格，左上正面、右上角色左前 45°、左下角色左侧 90°、右下背面。各格头部高度一致，保持头发和饰品完整，不要裁掉发尾。白色背景，无文字、无视图标签、无粗分隔框。",
+    );
+    sections.push(
+      "【四视图中的同一固定表情】\n画面依次为正面、角色自身左前 45°、角色自身左侧 90°、背面。将同一个头部保持固定表情整体转动，相当于同一时刻的不同机位，不是四帧动画，也不是四个不同表情。\n左右始终以角色自身为准。正面画面左侧＝角色右侧，正面画面右侧＝角色左侧；左前与左侧视图展示角色自身左侧。可见的每一只眼睛必须保持它在正面中的开合状态，不因视角改变而交换左右眼、改眨另一只眼或睁开已经闭合的眼睛。被转头遮住的远侧眼睛应自然不可见，不能为了展示两眼而画在侧脸外。背面仅画后脑与后发，不能添加脸。\n出图前逐格检查：视角数量与顺序、角色身份、发型前后对应、每只可见眼的开合、眉毛与嘴型均一致；修正不符合项后再输出。只输出四视图成图，不输出检查说明。",
+    );
+  }
+  sections.push("【本步骤设计要求】\n" + entry.prompt);
+  if (entry.notes.trim())
+    sections.push("【本次修改要求】\n" + entry.notes.trim());
+  return sections.join("\n\n");
+}

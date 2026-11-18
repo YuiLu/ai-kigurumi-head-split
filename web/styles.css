@@ -196,7 +196,7 @@ main {
   background: transparent;
   width: 100%;
   text-align: left;
-  padding: 16px;
+  padding: 16px 16px 13px;
   color: inherit;
   border-radius: var(--radius);
 }
@@ -204,7 +204,7 @@ main {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 13px;
+  margin-bottom: 0;
 }
 .stage-number {
   display: grid;
@@ -241,6 +241,14 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: calc(100% - 32px);
+  margin: 0 16px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+}
+.stage-preview:not(.empty) {
+  cursor: zoom-in;
 }
 .stage-preview img {
   width: 100%;
@@ -273,7 +281,10 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
+  padding: 12px 16px 16px;
+  width: 100%;
+  background: transparent;
+  text-align: left;
   min-height: 29px;
   color: var(--muted);
   font-size: 11px;
@@ -551,6 +562,49 @@ main {
 .generation-settings .field {
   margin-bottom: 0;
 }
+.expression-control {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 14px;
+  margin: 0 0 18px;
+  min-width: 0;
+}
+.expression-control[hidden] {
+  display: none;
+}
+.expression-control legend {
+  font-size: 12px;
+  color: var(--green);
+  padding: 0 5px;
+}
+.expression-control p,
+.request-details summary {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.expression-control p {
+  margin: 0 0 10px;
+}
+.expression-control .field:last-child {
+  margin-bottom: 0;
+}
+.eye-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.request-details {
+  margin-top: 20px;
+}
+.request-details summary {
+  cursor: pointer;
+}
+.request-details textarea {
+  margin-top: 10px;
+  font-size: 11px;
+  line-height: 1.7;
+}
 .results-pane {
   grid-column: 2;
   padding: 20px 28px;
@@ -568,6 +622,10 @@ main {
   padding: 7px;
   max-width: 280px;
   background: #eeefe8;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
 .result-card.selected {
   border-color: var(--green);
@@ -579,9 +637,9 @@ main {
   object-fit: contain;
   display: block;
   border-radius: 4px;
-  cursor: zoom-in;
+  cursor: pointer;
 }
-.result-card button {
+.result-caption {
   display: block;
   border: 0;
   width: 100%;
@@ -590,7 +648,7 @@ main {
   padding: 9px 3px 3px;
   color: var(--muted);
 }
-.result-card.selected button {
+.result-card.selected .result-caption {
   color: var(--green);
 }
 .empty-results {

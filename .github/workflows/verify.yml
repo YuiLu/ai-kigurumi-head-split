@@ -20,5 +20,7 @@ jobs:
         run: |
           node --check web/prompts.js
           node --check web/api.js
+          node --check web/generation.js
           node --check web/app.js
+          node --test tests/generation.test.cjs
           node -e "const fs = require('node:fs'); const config = JSON.parse(fs.readFileSync('esa.jsonc', 'utf8')); if (!fs.statSync(config.assets.directory + '/index.html').isFile()) process.exit(1);"

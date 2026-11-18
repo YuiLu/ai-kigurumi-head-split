@@ -101,6 +101,33 @@
                 placeholder="例如，指定画面左侧的蓝色花饰，保持材质和配色。"
               ></textarea>
             </label>
+            <fieldset id="expressionControl" class="expression-control">
+              <legend>表情约束</legend>
+              <p>以正面画面为准。未指定时，从标为「表情参考」的图片读取。</p>
+              <div class="eye-settings">
+                <label class="field"
+                  >画面左眼（角色右眼）<select id="viewerLeftEye">
+                    <option value="reference">跟随表情参考</option>
+                    <option value="open">睁开</option>
+                    <option value="closed">闭合</option>
+                  </select></label
+                >
+                <label class="field"
+                  >画面右眼（角色左眼）<select id="viewerRightEye">
+                    <option value="reference">跟随表情参考</option>
+                    <option value="open">睁开</option>
+                    <option value="closed">闭合</option>
+                  </select></label
+                >
+              </div>
+              <label class="field"
+                >必须保留的表情细节<textarea
+                  id="expressionDetails"
+                  rows="2"
+                  placeholder="例如，轻微噘嘴，保留闭眼处的上扬弧度，不带入捏脸的手。"
+                ></textarea>
+              </label>
+            </fieldset>
             <div class="generation-settings">
               <label class="field"
                 >尺寸<select id="size">
@@ -120,6 +147,15 @@
                 >数量<input type="number" id="count" value="1" min="1" max="4"
               /></label>
             </div>
+            <details class="request-details">
+              <summary>查看发给模型的完整提示词</summary>
+              <textarea
+                id="requestPrompt"
+                rows="10"
+                readonly
+                aria-label="发给模型的完整提示词"
+              ></textarea>
+            </details>
           </section>
           <section class="results-pane" id="resultsPane">
             <div class="panel-title">
@@ -191,6 +227,7 @@
     <div id="toast" class="toast" role="status" hidden></div>
     <script src="prompts.js"></script>
     <script src="api.js"></script>
+    <script src="generation.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

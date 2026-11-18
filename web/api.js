@@ -69,7 +69,12 @@ async function requestNanoBananaImages(prompt, references, signal, settings) {
   const n = clamp(parseInt(settings.imageCount, 10) || 1, 1, 4);
   const parts = [{ text: prompt }];
 
-  for (const file of references.slice(0, 16)) {
+  for (const [index, file] of references.slice(0, 16).entries()) {
+    parts.push({
+      text:
+        settings.referenceLabels?.[index] ||
+        `上传图 ${index + 1}「${file.name}」`,
+    });
     parts.push({
       inlineData: {
         mimeType: file.type || "image/png",

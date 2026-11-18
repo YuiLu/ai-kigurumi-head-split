@@ -74,6 +74,11 @@ const emptyEntry = (step, part) => ({
   files: [],
   results: [],
   selected: null,
+  expression: {
+    viewerLeftEye: "reference",
+    viewerRightEye: "reference",
+    details: "",
+  },
   carry: step > 1,
   size: "1024x1024",
   quality: "high",
@@ -218,8 +223,15 @@ function renderPipeline() {
       "aria-current",
       state.active === step ? "step" : "false",
     );
-    button.innerHTML = `<div class="stage-label"><span class="stage-number">${String(step).padStart(2, "0")}</span><div><span class="stage-name">${definition.title}</span></div></div><div class="stage-preview empty"></div><div class="stage-status"><span><i class="status-dot"></i><span class="status-text"></span></span><span class="result-total"></span></div>`;
-    const preview = $(".stage-preview", button);
+    button.innerHTML = `<div class="stage-label"><span class="stage-number">${String(step).padStart(2, "0")}</span><div><span class="stage-name">${definition.title}</span></div></div>`;
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "stage-preview empty";
+    const previewSource = result?.src || entry.files[0]?.src;
+    preview.setAttribute(
+      "aria-label",
+      previewSource ? `放大预览第 ${step} 步图片` : `打开第 ${step} 步工作区`,
+    );
     if (result || entry.files[0]) {
       preview.classList.remove("empty");
       preview.append(
@@ -229,17 +241,27 @@ function renderPipeline() {
       preview.innerHTML = `<div class="empty-content"><span class="empty-icon">${step === 1 ? "+" : "◇"}</span>${definition.empty}</div>`;
     }
     if (run) preview.append(loadingNode(run));
-    $(".status-text", button).textContent = statusText(step, entry);
-    $(".result-total", button).textContent = entry.results.length
+    const status = document.createElement("button");
+    status.type = "button";
+    status.className = "stage-status";
+    status.setAttribute("aria-label", `打开第 ${step} 步工作区`);
+    status.innerHTML =
+      '<span><i class="status-dot"></i><span class="status-text"></span></span><span class="result-total"></span>';
+    $(".status-text", status).textContent = statusText(step, entry);
+    $(".result-total", status).textContent = entry.results.length
       ? `${entry.results.length} 张`
       : "—";
-    button.onclick = () => {
+    const openStep = () => {
       state.active = step;
       state.tab = "references";
       render();
       persist();
     };
-    article.append(button);
+    button.onclick = openStep;
+    status.onclick = openStep;
+    preview.onclick = () =>
+      previewSource ? previewImage(previewSource) : openStep();
+    article.append(button, preview, status);
     if (run) article.append(cancelNode(run));
     $("#pipeline").append(article);
   });
@@ -281,22 +303,25 @@ function renderReferences() {
     `${entry.files.length + Number(Boolean(upstream))} 张`;
   const container = $("#uploads");
   container.replaceChildren();
-  entry.files.forEach((file) => {
+  entry.files.forEach((file, index) => {
     const item = document.createElement("div");
     item.className = "upload-item";
     const img = image(file.src);
     img.onclick = () => previewImage(file.src);
     const text = document.createElement("div");
     const name = document.createElement("small");
-    name.textContent = file.name;
+    name.textContent = `${index + 1 + Number(Boolean(upstream))} · ${file.name}`;
+    name.title = file.name;
     const role = document.createElement("select");
     role.setAttribute("aria-label", `${file.name} 的参考用途`);
     definitions[state.active - 1].roles.forEach((value) =>
       role.add(new Option(value, value)),
     );
     role.value = file.role;
+    role.disabled = state.runs.has(entryKey());
     role.onchange = () => {
       file.role = role.value;
+      renderRequestPreview();
       persist();
     };
     const remove = document.createElement("button");
@@ -312,6 +337,7 @@ function renderReferences() {
       renderReferences();
       renderPipeline();
       renderMobilePreview();
+      renderRequestPreview();
       persist();
     };
     text.append(name, role);
@@ -340,21 +366,26 @@ function renderResults() {
     empty.textContent = "生成后在这里选择一张图，继续下一步。";
     container.append(empty);
   }
-  entry.results.forEach((result) => {
-    const card = document.createElement("div");
+  entry.results.forEach((result, index) => {
+    const card = document.createElement("button");
+    card.type = "button";
     card.className = `result-card ${entry.selected === result.id ? "selected" : ""}`;
     const img = image(result.src, "生成结果");
-    img.onclick = () => previewImage(result.src);
-    const button = document.createElement("button");
-    button.textContent =
-      entry.selected === result.id ? "✓ 已选中" : "选用这张图";
-    button.setAttribute("aria-pressed", String(entry.selected === result.id));
-    button.onclick = () => {
+    const caption = document.createElement("span");
+    caption.className = "result-caption";
+    caption.textContent =
+      entry.selected === result.id ? "✓ 已选中 · 用于下一步" : "点击图片选用";
+    card.setAttribute("aria-pressed", String(entry.selected === result.id));
+    card.setAttribute(
+      "aria-label",
+      `选用第 ${index + 1} 张结果`,
+    );
+    card.onclick = () => {
       entry.selected = result.id;
       render();
       persist();
     };
-    card.append(img, button);
+    card.append(img, caption);
     container.append(card);
   });
   $("#download").disabled = !selected(state.active);
@@ -369,6 +400,10 @@ function render() {
     `STEP ${String(state.active).padStart(2, "0")} / 04`;
   $("#splitControl").hidden = state.active !== 4;
   $("#presetWrap").hidden = state.active === 4;
+  $("#expressionControl").hidden = state.active !== 1;
+  $("#viewerLeftEye").value = entry.expression?.viewerLeftEye || "reference";
+  $("#viewerRightEye").value = entry.expression?.viewerRightEye || "reference";
+  $("#expressionDetails").value = entry.expression?.details || "";
   const presets = $("#preset");
   presets.replaceChildren();
   if (state.active < 4)
@@ -399,6 +434,29 @@ function render() {
   renderReferences();
   renderResults();
   renderMobilePreview();
+  renderRequestPreview();
+}
+
+function referenceSources(entry = current(), step = state.active) {
+  const upstream = step > 1 && entry.carry ? selected(step - 1) : null;
+  return upstream
+    ? [
+        {
+          ...upstream,
+          name: `step-${step - 1}.png`,
+          role: `第 ${step - 1} 步选中结果`,
+        },
+        ...entry.files,
+      ]
+    : [...entry.files];
+}
+
+function renderRequestPreview() {
+  $("#requestPrompt").value = buildGenerationPrompt(
+    current(),
+    state.active,
+    referenceSources(),
+  );
 }
 
 async function addFiles(files) {
@@ -455,30 +513,16 @@ async function run() {
   }
   if (!entry.prompt.trim()) return notify("请填写提示词。");
   const upstream = step > 1 && entry.carry ? selected(step - 1) : null;
-  const sources = upstream
-    ? [
-        {
-          ...upstream,
-          name: `step-${step - 1}.png`,
-          role: `第 ${step - 1} 步选中结果`,
-        },
-        ...entry.files,
-      ]
-    : [...entry.files];
+  const sources = referenceSources(entry, step);
   if (!sources.length) return notify("请添加参考图，或先选择上一步的结果。");
   const settings = {
     ...state.settings,
     imageSize: entry.size,
     imageQuality: entry.quality,
     imageCount: entry.count,
+    referenceLabels: sources.map(describeReference),
   };
-  const prompt = [
-    entry.prompt,
-    entry.notes.trim() ? `本次修改要求\n${entry.notes.trim()}` : "",
-    `上传图片的分工\n${sources.map((file, index) => `${index + 1}. ${file.role}`).join("\n")}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const prompt = buildGenerationPrompt(entry, step, sources);
   const job = {
     start: Date.now(),
     controller: new AbortController(),
@@ -614,6 +658,7 @@ function bind() {
   $("#carry").onchange = (event) => {
     current().carry = event.target.checked;
     renderReferences();
+    renderRequestPreview();
     persist();
   };
   $("#preset").onchange = (event) => {
@@ -623,6 +668,7 @@ function bind() {
       (item) => item.key === entry.preset,
     ).zh;
     $("#prompt").value = entry.prompt;
+    renderRequestPreview();
     persist();
   };
   $("#resetPrompt").onclick = () => {
@@ -635,6 +681,22 @@ function bind() {
   for (const key of ["prompt", "notes", "size", "quality", "count"])
     $("#" + key).oninput = (event) => {
       current()[key] = event.target.value;
+      renderRequestPreview();
+      persist();
+    };
+  for (const [id, key] of [
+    ["viewerLeftEye", "viewerLeftEye"],
+    ["viewerRightEye", "viewerRightEye"],
+    ["expressionDetails", "details"],
+  ])
+    $("#" + id).oninput = (event) => {
+      current().expression ||= {
+        viewerLeftEye: "reference",
+        viewerRightEye: "reference",
+        details: "",
+      };
+      current().expression[key] = event.target.value;
+      renderRequestPreview();
       persist();
     };
   $$(".mobile-tabs button").forEach((button) => {
