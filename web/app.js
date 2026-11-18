@@ -74,11 +74,6 @@ const emptyEntry = (step, part) => ({
   files: [],
   results: [],
   selected: null,
-  expression: {
-    viewerLeftEye: "reference",
-    viewerRightEye: "reference",
-    details: "",
-  },
   carry: step > 1,
   size: "1024x1024",
   quality: "high",
@@ -400,10 +395,6 @@ function render() {
     `STEP ${String(state.active).padStart(2, "0")} / 04`;
   $("#splitControl").hidden = state.active !== 4;
   $("#presetWrap").hidden = state.active === 4;
-  $("#expressionControl").hidden = state.active !== 1;
-  $("#viewerLeftEye").value = entry.expression?.viewerLeftEye || "reference";
-  $("#viewerRightEye").value = entry.expression?.viewerRightEye || "reference";
-  $("#expressionDetails").value = entry.expression?.details || "";
   const presets = $("#preset");
   presets.replaceChildren();
   if (state.active < 4)
@@ -681,21 +672,6 @@ function bind() {
   for (const key of ["prompt", "notes", "size", "quality", "count"])
     $("#" + key).oninput = (event) => {
       current()[key] = event.target.value;
-      renderRequestPreview();
-      persist();
-    };
-  for (const [id, key] of [
-    ["viewerLeftEye", "viewerLeftEye"],
-    ["viewerRightEye", "viewerRightEye"],
-    ["expressionDetails", "details"],
-  ])
-    $("#" + id).oninput = (event) => {
-      current().expression ||= {
-        viewerLeftEye: "reference",
-        viewerRightEye: "reference",
-        details: "",
-      };
-      current().expression[key] = event.target.value;
       renderRequestPreview();
       persist();
     };

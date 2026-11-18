@@ -28,22 +28,23 @@ test("reference manifest matches upload order and gives expression priority over
   assert(prompt.includes("远侧眼睛应自然不可见"));
 });
 
-test("explicit wink keeps anatomical sides across all views without hardcoding a character", () => {
+test("manual expression requests use notes and stale removed controls do not affect generation", () => {
   const prompt = context.buildGenerationPrompt(
     {
       prompt: "四视图",
-      notes: "保持发饰",
+      notes: "画面左眼睁开、右眼闭合，轻微噘嘴，保持发饰",
       expression: {
         viewerLeftEye: "open",
         viewerRightEye: "closed",
-        details: "轻微噘嘴",
+        details: "旧的隐藏要求不应再发送",
       },
     },
     1,
     sources,
   );
-  assert(prompt.includes("正面画面左侧的眼睛＝角色自身右眼：睁开"));
-  assert(prompt.includes("正面画面右侧的眼睛＝角色自身左眼：完全闭合"));
+  assert(prompt.includes("画面左眼睁开、右眼闭合"));
+  assert(!prompt.includes("【用户表情锁定"));
+  assert(!prompt.includes("旧的隐藏要求不应再发送"));
   assert(prompt.includes("轻微噘嘴"));
   assert(prompt.includes("角色自身左侧 90°"));
   assert(prompt.includes("保持发饰"));

@@ -36,23 +36,6 @@ function buildGenerationPrompt(entry, step, sources) {
     );
   }
   if (step === 1) {
-    const expression = entry.expression || {};
-    const eyeState = {
-      open: "睁开，保留可见虹膜与瞳孔",
-      closed: "完全闭合，只画闭合眼睑线，不露虹膜或瞳孔",
-    };
-    const locks = [];
-    if (eyeState[expression.viewerLeftEye])
-      locks.push(
-        `正面画面左侧的眼睛＝角色自身右眼：${eyeState[expression.viewerLeftEye]}。`,
-      );
-    if (eyeState[expression.viewerRightEye])
-      locks.push(
-        `正面画面右侧的眼睛＝角色自身左眼：${eyeState[expression.viewerRightEye]}。`,
-      );
-    if (expression.details?.trim()) locks.push(expression.details.trim());
-    if (locks.length)
-      sections.push("【用户表情锁定，必须满足】\n" + locks.join("\n"));
     sections.push(
       "【输出排版】\n" +
         (/^\d+x\d+$/.test(entry.size || "")

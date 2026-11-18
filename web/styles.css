@@ -562,37 +562,10 @@ main {
 .generation-settings .field {
   margin-bottom: 0;
 }
-.expression-control {
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 14px;
-  margin: 0 0 18px;
-  min-width: 0;
-}
-.expression-control[hidden] {
-  display: none;
-}
-.expression-control legend {
-  font-size: 12px;
-  color: var(--green);
-  padding: 0 5px;
-}
-.expression-control p,
 .request-details summary {
   font-size: 11px;
   line-height: 1.7;
   color: var(--muted);
-}
-.expression-control p {
-  margin: 0 0 10px;
-}
-.expression-control .field:last-child {
-  margin-bottom: 0;
-}
-.eye-settings {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
 }
 .request-details {
   margin-top: 20px;
