@@ -49,6 +49,15 @@ let database;
 let toastTimer;
 let persistChain = Promise.resolve();
 let autosaveTimer;
+let itemIdCounter = 0;
+
+function createItemId() {
+  if (typeof globalThis.crypto?.randomUUID === "function")
+    return globalThis.crypto.randomUUID();
+  // These IDs identify local records. HTTP and older webviews may omit randomUUID.
+  return `${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}-${itemIdCounter++}`;
+}
+
 const entryKey = (step = state.active, part = state.part) =>
   step === 4 ? `4-${part}` : String(step);
 const current = () => state.entries[entryKey()];
@@ -418,7 +427,7 @@ async function addFiles(files) {
           reader.readAsDataURL(file);
         });
         return {
-          id: crypto.randomUUID(),
+          id: createItemId(),
           name: file.name,
           src,
           role: definitions[step - 1].roles[0],
@@ -494,7 +503,7 @@ async function run() {
     if (job.controller.signal.aborted)
       throw new DOMException("Aborted", "AbortError");
     const results = images.map((src) => ({
-      id: crypto.randomUUID(),
+      id: createItemId(),
       src,
       prompt,
     }));
