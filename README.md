@@ -34,17 +34,19 @@ python -m http.server 8080 --directory web
 
 ## ESA Pages 部署
 
-目标地址为 `https://easykig.yuilu.space`，使用阿里云 ESA Pages。仓库根目录的 [esa.jsonc](esa.jsonc) 指定项目名 `easykig-studio` 和静态目录 `./web`，安装与构建步骤均跳过。GitHub Actions 只检查脚本语法与部署目录。
+目标地址为 `https://easykig.yuilu.space`，使用阿里云 ESA Pages。仓库根目录的 [esa.jsonc](esa.jsonc) 指定已创建的 ESA 项目名 `ai-kigurumi-head-split` 和静态目录 `./web`，安装与构建步骤均跳过。GitHub Actions 只检查脚本语法与部署目录。
 
 首次接入操作如下。
 
 1. 在 [ESA 控制台](https://esa.console.aliyun.com/) 的「边缘计算和 AI → 函数和 Pages」创建项目，选择「导入 GitHub 仓库」。授权访问 `YuiLu/ai-kigurumi-head-split`。
-2. 生产分支选择 `main`，根目录保留 `/`，安装命令与构建命令留空，静态资源目录填写 `./web`。项目配置由根目录 `esa.jsonc` 管理。函数入口留空，然后开始部署。
+2. 生产分支选择 `main`，根目录保留 `/`，删除控制台自动填入的 `npm install` 和 `npm run build`，使安装命令与构建命令均为空，静态资源目录填写 `./web`。项目配置由根目录 `esa.jsonc` 管理，控制台也应保持一致。函数入口留空，然后开始部署。
 3. 部署完成后，在项目「域名」中绑定 `easykig.yuilu.space`。对应的 `yuilu.space` 站点需要已在 ESA 接入并处于可用状态。
 4. 若站点通过 CNAME 接入，将 ESA 生成的 CNAME 值添加到现有 DNS 服务商，主机记录填写 `easykig`。若通过 NS 接入，由 ESA 添加记录。按控制台返回的实际值操作。
 5. 在站点 SSL/TLS 中确认有效证书覆盖 `easykig.yuilu.space`，然后验证 HTTPS 首页、图片上传和图像 API 连接。
 
 接入后，推送 `main` 会由 ESA 自动部署。平台的临时预览链接需要带短期 token，日常使用以上自定义域名。
+
+如果日志出现 `Starting build: npm run build`，随后报找不到 `package.json` 的 `ENOENT` 错误，说明云端仍在执行默认构建命令。本项目是纯静态网页，请在项目「基本信息 → 构建信息 → 修改」清空安装与构建命令，确认静态资源目录为 `./web`，保存后重新构建。首次接入已遇到此情况，仅设置仓库中的空命令未能跳过控制台默认命令。
 
 这是浏览器直连图像 API 的静态前端。API Key 在网页的连接设置中填写并保存在本机浏览器，不需要放到 ESA 构建变量或 Git 仓库。API 服务需要允许来自 `https://easykig.yuilu.space` 的跨域请求。更换访问域名会使用独立的浏览器存储，旧地址下的图片与连接设置需要在原地址导出或重新配置。
 
