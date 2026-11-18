@@ -1,0 +1,8 @@
+{
+  "name": "easykig-studio",
+  "installCommand": "",
+  "buildCommand": "",
+  "assets": {
+    "directory": "./web"
+  }
+}

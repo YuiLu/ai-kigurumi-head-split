@@ -30,7 +30,25 @@ python -m http.server 8080 --directory web
 - `web/app.js` 负责四步状态、参考输入、拆件与本地保存。
 - `web/styles.css` 分别提供桌面流程和移动端工作区布局。
 
-推送 main 后由现有 GitHub Pages 工作流发布 `web/`，首次使用需在仓库 Settings → Pages 选择 GitHub Actions，并启用该 fork 的 Actions。
+本仓库独立开发，日常修改直接提交到本仓库的分支，再合入本仓库 `main`。不向原仓库提交 PR 或合并开发成果。保留的上游来源与许可见下文。
+
+## ESA Pages 部署
+
+目标地址为 `https://easykig.yuilu.space`，使用阿里云 ESA Pages。仓库根目录的 [esa.jsonc](esa.jsonc) 指定项目名 `easykig-studio` 和静态目录 `./web`，安装与构建步骤均跳过。GitHub Actions 只检查脚本语法与部署目录。
+
+首次接入操作如下。
+
+1. 在 [ESA 控制台](https://esa.console.aliyun.com/) 的「边缘计算和 AI → 函数和 Pages」创建项目，选择「导入 GitHub 仓库」。授权访问 `YuiLu/ai-kigurumi-head-split`。
+2. 生产分支选择 `main`，根目录保留 `/`，安装命令与构建命令留空，静态资源目录填写 `./web`。项目配置由根目录 `esa.jsonc` 管理。函数入口留空，然后开始部署。
+3. 部署完成后，在项目「域名」中绑定 `easykig.yuilu.space`。对应的 `yuilu.space` 站点需要已在 ESA 接入并处于可用状态。
+4. 若站点通过 CNAME 接入，将 ESA 生成的 CNAME 值添加到现有 DNS 服务商，主机记录填写 `easykig`。若通过 NS 接入，由 ESA 添加记录。按控制台返回的实际值操作。
+5. 在站点 SSL/TLS 中确认有效证书覆盖 `easykig.yuilu.space`，然后验证 HTTPS 首页、图片上传和图像 API 连接。
+
+接入后，推送 `main` 会由 ESA 自动部署。平台的临时预览链接需要带短期 token，日常使用以上自定义域名。
+
+这是浏览器直连图像 API 的静态前端。API Key 在网页的连接设置中填写并保存在本机浏览器，不需要放到 ESA 构建变量或 Git 仓库。API 服务需要允许来自 `https://easykig.yuilu.space` 的跨域请求。更换访问域名会使用独立的浏览器存储，旧地址下的图片与连接设置需要在原地址导出或重新配置。
+
+官方文档可参考 [导入 GitHub 仓库](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/connect-pages-to-github)、[构建配置](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/build-pages) 和 [域名绑定](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/trigger/)。
 
 ## 许可与来源
 
