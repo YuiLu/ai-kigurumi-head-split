@@ -25,6 +25,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check browser scripts
+        run: |
+          node --check web/prompts.js
+          node --check web/api.js
+          node --check web/app.js
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

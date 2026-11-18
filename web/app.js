@@ -1,1249 +1,687 @@
-const STORAGE_KEY = "kigurumi-head-studio-v1";
-const FIRST_VISIT_KEY = "kigurumi-head-studio-first-visit-dismissed";
-
-const imageModelPresets = [
-  "gpt-image-2",
-  "gpt-image-1",
-  "nano-banana",
-  "gemini-2.5-flash-image",
-  "gemini-2.5-flash-image-preview",
-  "gemini-3.1-flash-image-preview",
-  "gemini-3-pro-image-preview"
-];
-
-const dictionaries = {
-  zh: {
-    brand: "Kigurumi 头壳工作台",
-    clearLocal: "清除本地数据",
-    eyebrow: "三阶段图像工作流",
-    headline: "AI Kigurumi Head Reference Workflow",
-    lede: "从角色参考图生成去遮挡头部四视图、Kigurumi 头壳设计图和商品照风格多视图参考。",
-    apiEyebrow: "连接设置",
-    apiTitle: "图像 API 设置",
-    apiStatusMissing: "需要 API Key",
-    apiStatusReady: "已在本地保存",
-    apiBase: "API Base URL",
-    apiKey: "API Key",
-    imageModel: "图像模型",
-    size: "输出尺寸",
-    count: "数量",
-    quality: "质量",
-    privacyNotice: "API Base URL 和 Key 只保存在当前浏览器中，不会写入 GitHub 仓库，也不会公开。执行阶段时，Key 只会发送给你配置的 API 端点。",
-    promptPreset: "Prompt 模板",
-    uploadRefs: "上传参考图",
-    uploadSlot: "上传",
-    uploadHelp: "可一次选择多张图片，也可拖拽图片到对应槽位。",
-    replaceSlot: "继续上传",
-    deleteSlot: "全部删除",
-    otherRefs: "其他参考图",
-    otherRefsHelp: "上传补充材料，避免过多重复或分工不清的图片。",
-    previousCarryNote: "已使用上一阶段选中的图片作为主参考，因此该槽位已禁用。",
-    includePrev: "包含上一阶段选中的图片",
-    includeCurrent: "使用本阶段选中图片继续微调（生成图片后可用，将禁用 Prompt）",
-    useRefinementRefs: "微调时同时使用上传的参考图",
-    details: "详细修改要求",
-    detailsPlaceholder: "例如：只修正表情，保持发型结构和四视图排版不变。",
-    prompt: "Prompt",
-    runStage: "执行阶段",
-    noticePrefix: "请注意：",
-    runStageHelp: "在执行某阶段时，如果图像生成 API 已经开始处理，这次生成可能无法取消，也可能仍会计费。生成的图片不会自动保存，刷新页面后会消失；如果需要，请记得下载。",
-    firstVisitTitle: "生成前提示",
-    understood: "我知道了",
-    copyPrompt: "复制 Prompt",
-    select: "选中",
-    selected: "已选中",
-    download: "下载",
-    resultsTitle: "生成结果",
-    running: "正在请求图像 API...",
-    runningElapsed: "已用时",
-    cancelGeneration: "取消生成",
-    cancelNotUndoable: "已尝试取消本地请求。在执行某阶段时，如果图像生成 API 已经开始处理，这次生成可能无法取消，也可能仍会计费。生成的图片不会自动保存，刷新页面后会消失；如果需要，请记得下载。",
-    canceled: "已取消生成请求。",
-    missingKey: "请先填写图像 API Key。",
-    missingPrompt: "请先填写要发送的 Prompt。",
-    noImage: "还没有结果。上传参考图并执行本阶段。",
-    done: "完成。可以选中一张图片进入下一阶段。",
-    failed: "执行失败：",
-    copied: "已复制。",
-    helperEyebrow: "故障排查",
-    helperTitle: "自动 Prompt 生成器",
-    textApiBase: "文本 API Base URL",
-    textApiKey: "文本 API Key",
-    textModel: "文本模型",
-    helperStage: "阶段",
-    refsUsed: "参考图和分工",
-    refsPlaceholder: "1. 正面结构参考图\n2. 表情参考图\n3. Kigurumi 案例图",
-    currentPrompt: "当前 Prompt",
-    whatWorked: "正确且希望保留的部分",
-    whatFailed: "错误且希望修正的部分",
-    generatePrompt: "生成更强 Prompt",
-    copy: "复制",
-    helperMissing: "请填写文本 API Key，或复用上方图像 API Key。",
-    helperRunning: "正在生成修正 Prompt...",
-    helperDone: "已生成。"
-  },
-  en: {
-    brand: "Kigurumi Head Studio",
-    clearLocal: "Clear local data",
-    eyebrow: "Three-stage image workflow",
-    headline: "AI Kigurumi Head Reference Workflow",
-    lede: "Turn character references into clean head turnarounds, kigurumi shell designs, and product-style multi-view references.",
-    apiEyebrow: "Connection",
-    apiTitle: "Image API settings",
-    apiStatusMissing: "API key required",
-    apiStatusReady: "Saved locally",
-    apiBase: "API base URL",
-    apiKey: "API key",
-    imageModel: "Image model",
-    size: "Output size",
-    count: "Number",
-    quality: "Quality",
-    privacyNotice: "Your API base URL and keys are stored only in this browser. They are never written into this GitHub repository or made public. When you run a stage, the key is sent only to the API endpoint you configured.",
-    promptPreset: "Prompt preset",
-    uploadRefs: "Upload reference images",
-    uploadSlot: "Upload",
-    uploadHelp: "You can choose multiple images at once or drag images into this slot.",
-    replaceSlot: "Add more",
-    deleteSlot: "Delete all",
-    otherRefs: "Other reference images",
-    otherRefsHelp: "Upload supporting references, while avoiding too many duplicate or unclear-role images.",
-    previousCarryNote: "The selected previous-stage image is already used as the main reference, so this slot is disabled.",
-    includePrev: "Include selected image from previous stage",
-    includeCurrent: "Use selected image from this stage for refinement (available after generation; disables Prompt)",
-    useRefinementRefs: "Use uploaded reference images during refinement",
-    details: "Detailed modification notes",
-    detailsPlaceholder: "Example: only fix the expression; keep hairstyle structure and four-view layout unchanged.",
-    prompt: "Prompt",
-    runStage: "Run stage",
-    noticePrefix: "Note:",
-    runStageHelp: "When running a stage, if the image generation API has already started processing, this generation may not be cancelable and may still be billed. Generated images are not saved automatically and will disappear if the page refreshes; download them if you need them.",
-    firstVisitTitle: "Before generation",
-    understood: "Understood",
-    copyPrompt: "Copy prompt",
-    select: "Select",
-    selected: "Selected",
-    download: "Download",
-    resultsTitle: "Generated results",
-    running: "Requesting the image API...",
-    runningElapsed: "Elapsed",
-    cancelGeneration: "Cancel generation",
-    cancelNotUndoable: "Tried to cancel the local request. If the API has already started processing, this generation may not be undoable and may still be billed.",
-    canceled: "Generation request canceled.",
-    missingKey: "Fill in the image API key first.",
-    missingPrompt: "Fill in the prompt that should be sent first.",
-    noImage: "No results yet. Upload references and run this stage.",
-    done: "Done. Select one image to carry into the next stage.",
-    failed: "Failed: ",
-    copied: "Copied.",
-    helperEyebrow: "Troubleshooting",
-    helperTitle: "Auto-prompt generator",
-    textApiBase: "Text API base URL",
-    textApiKey: "Text API key",
-    textModel: "Text model",
-    helperStage: "Stage",
-    refsUsed: "Reference images and roles",
-    refsPlaceholder: "1. Front structure reference\n2. Expression reference\n3. Kigurumi example",
-    currentPrompt: "Current prompt",
-    whatWorked: "What is correct and should be kept",
-    whatFailed: "What is wrong and should be fixed",
-    generatePrompt: "Generate stronger prompt",
-    copy: "Copy",
-    helperMissing: "Fill in a text API key, or reuse the image API key above.",
-    helperRunning: "Generating revised prompt...",
-    helperDone: "Generated."
-  }
-};
-
-const referenceGuidance = {
-  1: {
-    min: 4,
-    max: 7,
-    slots: [
-      {
-        title: { zh: "结构参考图", en: "Structure references" },
-        help: { zh: "正面、背面、侧面或45度，用于发型和头部结构。", en: "Front, back, side, or 45-degree views for hairstyle and head structure." }
-      },
-      {
-        title: { zh: "表情参考图", en: "Expression reference" },
-        help: { zh: "用于眉毛、眼神、眼睑和嘴巴情绪。", en: "Used for eyebrows, gaze, eyelids, mouth, and emotion." }
-      },
-      {
-        title: { zh: "官方角色图", en: "Official character art" },
-        help: { zh: "用于气质、配色、虹膜颜色和角色识别感。", en: "Used for temperament, color palette, iris color, and identity." }
-      }
-    ]
-  },
-  2: {
-    min: 4,
-    max: 6,
-    slots: [
-      {
-        title: { zh: "Step 1 最终四视图", en: "Final Step 1 turnaround" },
-        help: { zh: "作为角色身份、发型和四视图关系的主参考。", en: "Main reference for identity, hairstyle, and view relationships." }
-      },
-      {
-        title: { zh: "目标表情参考", en: "Target expression" },
-        help: { zh: "建议1-2 张，用于固定最终头壳表情。", en: "Recommended 1-2 images for final shell expression." }
-      },
-      {
-        title: { zh: "Kigurumi 案例图", en: "Kigurumi examples" },
-        help: { zh: "建议2-3 张，只参考头壳比例、眼眶和假发处理。", en: "Recommended 2-3 images only for shell proportions, sockets, and wig handling." }
-      }
-    ]
-  },
-  3: {
-    min: 2,
-    max: 5,
-    slots: [
-      {
-        title: { zh: "Step 2 最终头壳图", en: "Final Step 2 shell design" },
-        help: { zh: "作为最终结构、发型、脸型和表情依据。", en: "Main basis for final structure, hairstyle, face shape, and expression." }
-      },
-      {
-        title: { zh: "商品照案例图", en: "Product-photo examples" },
-        help: { zh: "建议1-3 张，用于白底拍摄质量、材质和展示方式。", en: "Recommended 1-3 images for white-background photo quality, material, and display." }
-      },
-      {
-        title: { zh: "表情参考图（可选）", en: "Expression reference (optional)" },
-        help: { zh: "用于确认最终眉毛、眼神和嘴巴。", en: "Used to confirm final eyebrows, gaze, and mouth." }
-      }
-    ]
-  }
-};
-
-const stages = [
-  {
-    id: 1,
-    kicker: { zh: "Step 1", en: "Step 1" },
-    title: { zh: "去遮挡角色头部四视图", en: "Unobstructed character head turnaround" },
-    presets: [
-      {
-        key: "general",
-        label: { zh: "通用 Prompt", en: "General prompt" },
-        zh: `请根据我上传的参考图，生成这个角色“去遮挡后的头部四视图设定图”。\n\n参考图分工如下：\n1. 结构参考图：用于确定角色的头部结构、发型轮廓、耳朵位置、侧脸轮廓、后脑和背面发型。\n2. 表情参考图：用于确定角色的眉毛、眼神、眼睑形状、嘴巴和整体表情。\n3. 官方角色图：用于确定角色气质、配色、虹膜颜色和角色识别感。\n\n请生成一张干净的角色头部四视图设定图，包括：正面、左前45度、左侧面、背面。\n\n要求：去掉遮挡物，例如兜帽、帽子、面罩等，但保留角色必要的小发饰。只保留头部、头发、耳朵和必要饰品。保留角色原本的表情、眼神和气质。发型结构应根据结构参考图合理补全。不要改成普通萌系脸。不要把脸做得太3D、太写实、太立体。不要生成kigurumi头壳。不要生成真人、cosplay、娃娃、手办、3D渲染风格。白色背景，角色设定图风格，结构清晰。四个视角必须是同一个角色、同一个发型、同一个表情系统。`,
-        en: `Use the uploaded references to generate an unobstructed four-view character head design sheet.\n\nReference roles:\n1. Structure references define head shape, hairstyle silhouette, ear position, side profile, back of head, and rear hairstyle.\n2. Expression references define eyebrows, gaze, eyelids, mouth shape, and emotion.\n3. Official character art defines character identity, color palette, iris color, and overall temperament.\n\nCreate a clean head turnaround with front, left 45-degree, left side, and back views.\n\nRequirements: remove obstructing items such as hoods, hats, masks, or face coverings, while keeping necessary small hair accessories. Keep only the head, hair, ears, and required accessories. Preserve the character's original expression, gaze, and temperament. Complete the hairstyle logically from structural references. Do not turn it into a generic cute face. Do not make the face too 3D, realistic, or sculpted. Do not create a kigurumi head shell yet. Do not create a real person, cosplay, doll, figure, or 3D render. Use a white background and clear character design-sheet style. All four views must show the same character, same hairstyle, and same expression system.`
-      },
-      {
-        key: "expression",
-        label: { zh: "表情修正", en: "Expression fix" },
-        zh: "请基于当前四视图设定图进行微调，不要重新设计角色。\n\n当前发型结构和四视图一致性基本正确，请保持不变。这次只重点修正表情。\n\n请根据目标表情参考图调整：眉毛角度、眼神、上眼睑和下眼睑形状、嘴巴形状、整体情绪。\n\n要求：表情更接近参考图。不要自动微笑，除非参考图本身就是微笑。不要改成普通可爱表情。不要让表情过度夸张。保持角色原本气质。\n\n输出仍然是同一个角色的头部四视图设定图。",
-        en: "Refine the current four-view design sheet without redesigning the character.\n\nThe hairstyle structure and four-view consistency are mostly correct; keep them unchanged. Focus only on the expression.\n\nAdjust eyebrow angle, gaze, upper and lower eyelid shapes, mouth shape, and overall emotion according to the target expression reference.\n\nRequirements: make the expression closer to the reference. Do not add a smile unless the reference is smiling. Do not turn it into a generic cute expression. Do not exaggerate the expression. Preserve the character's temperament.\n\nOutput the same character head four-view design sheet."
-      },
-      {
-        key: "face",
-        label: { zh: "正脸修正", en: "Front face fix" },
-        zh: "请基于当前四视图设定图进行微调，不要重新设计角色。\n\n当前发型和四视图一致性基本正确，请保持不变。这次重点修正正脸五官。\n\n请根据正脸参考图调整：眼睛形状、眼距、眉眼关系、嘴巴位置、脸部比例、虹膜颜色和眼神。\n\n要求：正脸更接近目标角色。不要改变发型结构。不要改变角色身份。不要变成普通模板脸。不要把脸变得更3D、更写实或更立体。\n\n输出仍然是角色头部四视图设定图。",
-        en: "Refine the current four-view design sheet without redesigning the character.\n\nThe hairstyle and four-view consistency are mostly correct; keep them unchanged. Focus on the front-view facial features.\n\nAdjust eye shape, eye spacing, eyebrow-eye relationship, mouth position, facial proportions, iris color, and gaze according to the front-face reference.\n\nRequirements: make the front face closer to the target character. Do not change the hairstyle structure or character identity. Do not turn it into a generic template face. Do not make it more 3D, realistic, or sculpted.\n\nOutput the character head four-view design sheet."
-      },
-      {
-        key: "childlike",
-        label: { zh: "脸型幼态化", en: "Rounder childlike face" },
-        zh: "请基于当前四视图设定图进行脸型修正，不要重新设计角色。\n\n当前问题是脸型偏尖、偏成熟，不够幼态。\n\n请重点调整：下巴缩短；下巴更圆、更钝、更小；下半张脸缩短；脸颊更饱满；下颌线更柔和；整体脸型更圆润、更幼态；不要长脸；不要尖下巴；不要成熟脸。\n\n同时保持：发型结构不变；表情不变；角色识别度不变；四视图排版不变。\n\n输出仍然是同一个角色的头部四视图设定图。",
-        en: "Correct the face shape in the current four-view design sheet without redesigning the character.\n\nThe current issue is that the face is too sharp, mature, and not childlike enough.\n\nAdjust: shorten the chin; make the chin rounder, blunter, and smaller; shorten the lower face; make cheeks fuller; soften the jawline; make the overall face rounder and more childlike; avoid a long face, pointed chin, or mature face.\n\nKeep the hairstyle structure, expression, character identity, and four-view layout unchanged.\n\nOutput the same character head four-view design sheet."
-      }
-    ]
-  },
-  {
-    id: 2,
-    kicker: { zh: "Step 2", en: "Step 2" },
-    title: { zh: "Kigurumi 头壳四视图设计图", en: "Kigurumi head shell design turnaround" },
-    presets: [
-      {
-        key: "general",
-        label: { zh: "通用 Prompt", en: "General prompt" },
-        zh: `请根据我上传的参考图，把角色头部四视图设定图转换成 animegao kigurumi 头壳四视图设计图。\n\n参考图分工如下：\n1. 角色头部四视图设定图：作为最重要的主参考，用于确定目标角色的身份、发型结构、发色、耳朵位置、脸型方向、眼睛形状、整体比例和四视图关系。\n2. 目标表情参考图：只用于参考最终表情，尤其是眉毛、眼神、眼睑形状和嘴巴形状。\n3. kigurumi头壳案例图：只用于参考animegao kigurumi头壳的比例语言、面壳结构、眼眶处理、假发处理方式和设计完成度。不要复制案例图中的角色五官、发型和配色。\n\n请生成一张kigurumi头壳四视图设计图，包括：正面、左前45度、左侧面、背面。\n\n要求：必须是kigurumi头壳设计图，不是普通动漫头像。必须是实体可制作的头壳，有硬质面壳、固定表情、假发和必要饰品。保留目标角色的发型、发色、耳朵、眼睛颜色、眼神和整体气质。表情必须接近目标表情参考图。脸型保持幼态、圆润、短下巴，不要变成长脸或尖下巴。面部适合animegao kigurumi头壳：鼻子弱化，嘴巴简化，脸部平滑，不要过度立体。眼睛应是animegao kigurumi风格的大眼睛，有明确眼眶结构、眼线和睫毛。不要变成真人眼、玻璃眼或3D娃娃眼。假发可以有真实发丝质感，但整体发型轮廓必须保持角色设定图中的形状。四个视角必须是同一个头壳连续旋转展示。白色背景，清晰设计图风格，适合作为后续商品照和店家制作参考。\n\n禁止：不要生成真人。不要生成cosplay妆面。不要生成普通动漫插画头像。不要生成3D手办或BJD娃娃。不要生成过度写实的皮肤纹理。不要生成明显唇彩。不要让脸部变得太立体。不要改变角色发型结构。不要加入原本已经去掉的遮挡物。`,
-        en: `Convert the uploaded character head four-view design sheet into an animegao kigurumi head shell four-view design sheet.\n\nReference roles:\n1. Character head turnaround is the primary reference for identity, hairstyle structure, hair color, ear position, face direction, eye shape, proportions, and view relationships.\n2. Target expression references are only for final expression: eyebrows, gaze, eyelids, and mouth shape.\n3. Kigurumi examples are only for animegao kigurumi proportions, face shell structure, eye-socket treatment, wig handling, and design finish. Do not copy their character features, hairstyle, or colors.\n\nCreate a kigurumi head shell four-view design sheet with front, left 45-degree, left side, and back views.\n\nRequirements: it must be a kigurumi head shell design, not a normal anime avatar. It must look like a physical manufacturable shell with a hard face shell, fixed expression, wig, and required accessories. Preserve the target character's hairstyle, hair color, ears, eye color, gaze, and temperament. The expression must match the target expression reference. Keep the face childlike, round, and short-chinned; avoid a long or pointed chin. The face should suit animegao kigurumi: weakened nose, simplified mouth, smooth face, and not overly sculpted. Eyes should be large animegao kigurumi eyes with clear eye-socket structure, eyeliner, and lashes. Do not make them real human eyes, glass eyes, or 3D doll eyes. The wig may have realistic fiber texture, but the overall silhouette must match the character design sheet. All four views must show the same head shell as a continuous rotation. White background, clear design-sheet style, suitable for product-photo generation and maker reference.\n\nForbidden: real person, cosplay makeup, normal anime illustration avatar, 3D figure, BJD doll, realistic skin texture, obvious lip gloss, overly sculpted face, changed hairstyle structure, or reintroduced removed obstructions.`
-      },
-      {
-        key: "shell",
-        label: { zh: "头壳感不足", en: "More shell-like" },
-        zh: "请基于当前结果继续修改，不要重新设计角色。\n\n当前问题是：结果仍然太像普通动漫头像，kigurumi头壳感不足。\n\n请加强kigurumi头壳特征：明确表现为实体animegao kigurumi头壳。面部是硬质平滑面壳，不是普通绘画脸。眼睛有头壳眼眶结构，不是普通插画眼睛。眼线、睫毛、眼眶厚度更像真实kigurumi头壳。脸部保持固定表情，有面具感和实体头壳感。假发作为头壳上的真实假发存在，而不是普通插画头发。侧面要有头壳厚度和后脑体积。\n\n请保持：目标角色的发型、发色、耳朵、眼睛颜色和整体气质。当前四视图排版。幼态圆润脸型。目标表情。\n\n输出仍然是kigurumi头壳四视图设计图。",
-        en: "Continue modifying the current result without redesigning the character.\n\nThe current issue: it still looks too much like a normal anime avatar and not enough like a kigurumi head shell.\n\nStrengthen the kigurumi shell features: clearly present it as a physical animegao kigurumi head shell. The face should be a hard smooth shell, not a normal drawn face. Eyes should have head-shell eye-socket structure, not ordinary illustration eyes. Eyeliner, lashes, and socket thickness should look closer to a real kigurumi shell. The face should have a fixed expression with mask-like physical shell presence. The wig should exist as a real wig mounted on the shell, not ordinary illustrated hair. Side view should show shell thickness and back-head volume.\n\nKeep the target character's hairstyle, hair color, ears, eye color, temperament, current four-view layout, round childlike face, and target expression.\n\nOutput the kigurumi head shell four-view design sheet."
-      },
-      {
-        key: "too3d",
-        label: { zh: "太3D/太娃娃", en: "Less 3D or doll-like" },
-        zh: "请基于当前结果继续修改，不要重新设计角色。\n\n当前问题是：脸部太3D、太立体、太像娃娃或手办，不够像animegao kigurumi头壳。\n\n请调整为更平滑、更简化的kigurumi面壳风格：脸部不要有过强的立体塑形。鼻子进一步弱化。嘴巴进一步简化。不要明显唇彩。不要真实皮肤纹理。不要真人感。面壳应是平滑硬质表面，而不是3D角色脸或BJD娃娃脸。脸型保持圆润幼态，短下巴，柔和脸颊。眼睛保持animegao大眼风格，但不要变成玻璃眼或3D眼球。\n\n请保持：目标角色的发型结构和耳朵。四视图一致。目标表情。白色背景和设计图排版。\n\n输出仍然是kigurumi头壳四视图设计图。",
-        en: "Continue modifying the current result without redesigning the character.\n\nThe current issue: the face is too 3D, too sculpted, too much like a doll or figure, and not enough like an animegao kigurumi shell.\n\nAdjust it to a smoother, simpler kigurumi face-shell style: avoid strong facial sculpting. Weaken the nose further. Simplify the mouth further. Avoid obvious lip gloss, realistic skin texture, and human realism. The shell should be a smooth hard surface, not a 3D character face or BJD doll face. Keep the face round, childlike, short-chinned, and soft-cheeked. Keep animegao large-eye style, but avoid glass eyes or 3D eyeballs.\n\nKeep the target character's hairstyle structure, ears, four-view consistency, target expression, white background, and design-sheet layout.\n\nOutput the kigurumi head shell four-view design sheet."
-      },
-      {
-        key: "expression",
-        label: { zh: "表情跑偏", en: "Expression drift" },
-        zh: "请基于当前kigurumi头壳四视图进行表情修正，不要重新设计头壳。\n\n当前头壳结构、发型和四视图关系基本保留，请重点修改表情。\n\n请根据目标表情参考图调整：眉毛角度、眼神方向和情绪、上眼睑和下眼睑形状、嘴巴形状、整体气质。\n\n要求：表情必须更接近参考图。不要自动微笑，除非参考图本身就是微笑。不要改成普通可爱表情。不要让表情过度夸张。表情修改时不要改变发型、耳朵、脸型和四视图排版。\n\n输出仍然是同一个kigurumi头壳四视图设计图。",
-        en: "Fix the expression in the current kigurumi head shell four-view sheet without redesigning the shell.\n\nThe shell structure, hairstyle, and view relationships are mostly preserved; focus on expression.\n\nAdjust eyebrow angle, gaze direction and emotion, upper and lower eyelid shapes, mouth shape, and overall temperament according to the expression reference.\n\nRequirements: the expression must be closer to the reference. Do not add a smile unless the reference is smiling. Do not turn it into a generic cute expression. Do not exaggerate. Do not change hairstyle, ears, face shape, or four-view layout while fixing expression.\n\nOutput the same kigurumi head shell four-view design sheet."
-      },
-      {
-        key: "face",
-        label: { zh: "脸型变尖", en: "Pointed face fix" },
-        zh: "请基于当前kigurumi头壳四视图进行脸型修正，不要重新设计头壳。\n\n当前问题是：脸型又变得偏尖、偏成熟，不够幼态。\n\n请重点修正脸型：下巴缩短。下巴更圆、更钝、更小。下半张脸缩短。脸颊更饱满。下颌线更柔和。整体脸型更偏圆润幼态。不要长脸。不要尖下巴。不要成熟脸。\n\n同时保持：发型结构不变。耳朵位置不变。表情不变。眼睛颜色和角色气质不变。四视图排版不变。仍然是kigurumi头壳设计图。",
-        en: "Correct the face shape in the current kigurumi head shell four-view sheet without redesigning the shell.\n\nThe current issue: the face became too pointed, mature, and not childlike enough.\n\nFix the face shape: shorten the chin; make the chin rounder, blunter, and smaller; shorten the lower face; make cheeks fuller; soften the jawline; make the overall face rounder and more childlike; avoid a long face, pointed chin, or mature face.\n\nKeep hairstyle structure, ear position, expression, eye color, character temperament, four-view layout, and kigurumi shell design identity unchanged."
-      }
-    ]
-  },
-  {
-    id: 3,
-    kicker: { zh: "Step 3", en: "Step 3" },
-    title: { zh: "商品照风格四面/八面视图", en: "Product-style four/eight-view reference" },
-    presets: [
-      {
-        key: "four",
-        label: { zh: "四面图 Prompt", en: "Four-view prompt" },
-        zh: `请基于上传的kigurumi头壳设计图，生成最终的kigurumi头壳商品照四面视图。\n\n参考图分工如下：\n1. kigurumi头壳设计图：作为最终头壳结构、发型、脸型、眼睛、耳朵和表情的主要依据。\n2. 商品照案例图：只用于参考拍摄质量、白底商品照风格、头壳材质、假发质感和展示方式。\n3. 表情参考图：用于确认最终眉毛、眼神和嘴巴的情绪。\n\n请生成一张白底商品照风格的kigurumi头壳四面视图，包括：正面、左前45度、左侧面、背面。\n\n要求：成品必须是kigurumi头壳商品照，不是插画，不是普通动漫头像，不是真人cosplay。四个视角必须是同一个头壳，结构一致。保留目标角色的发型、耳朵、发色、眼睛颜色和整体气质。表情必须符合参考图，尤其是眉毛、眼神、嘴巴。面壳为平滑硬质头壳，脸部不要过度立体。鼻子弱化，嘴巴简洁。不要明显唇彩，不要真人皮肤纹理，不要真实人脸感。假发可以有真实纤维质感，但整体仍然保持animegao kigurumi风格。白色背景，干净商品图排版，高质量。`,
-        en: `Generate the final kigurumi head shell product-photo four-view sheet based on the uploaded kigurumi shell design.\n\nReference roles:\n1. Kigurumi head shell design is the main basis for final shell structure, hairstyle, face shape, eyes, ears, and expression.\n2. Product photo examples are only for shooting quality, white-background product style, shell material, wig texture, and display method.\n3. Expression reference confirms eyebrow, gaze, and mouth emotion.\n\nCreate a white-background product-photo style kigurumi head shell four-view sheet: front, left 45-degree, left side, and back.\n\nRequirements: the final image must be a kigurumi head shell product photo, not an illustration, normal anime avatar, or real cosplay. All four views must show the same head shell with consistent structure. Preserve the target character's hairstyle, ears, hair color, eye color, and temperament. Expression must match the reference, especially eyebrows, gaze, and mouth. The face shell should be smooth and hard, not overly sculpted. Weaken the nose and keep the mouth simple. Avoid obvious lip gloss, realistic skin texture, or real human face feeling. Wig may have realistic fiber texture while staying animegao kigurumi. White background, clean product layout, high quality.`
-      },
-      {
-        key: "eight",
-        label: { zh: "八面图 Prompt", en: "Eight-view prompt" },
-        zh: `请基于上传的kigurumi头壳设计图，生成最终的kigurumi头壳商品照八面视图。\n\n请输出八个视角：正面、左前45度、左侧面、左后45度、背面、右后45度、右侧面、右前45度。\n\n参考图分工如下：\n1. kigurumi头壳设计图：作为最终头壳结构、发型、脸型、眼睛、耳朵和表情的主要依据。\n2. 商品照案例图：只用于参考拍摄质量、白底商品照风格、头壳材质、假发质感和展示方式。\n3. 表情参考图：用于确认最终眉毛、眼神和嘴巴的情绪。\n\n要求：成品必须是kigurumi头壳商品照八面视图。八个视角必须是同一个头壳连续旋转展示，不能变成八个不同角色。保留目标角色的发型、耳朵、发色、眼睛颜色和整体气质。表情必须符合参考图，尤其是眉毛、眼神、嘴巴。面壳为平滑硬质头壳，脸部不要过度立体。鼻子弱化，嘴巴简洁。不要明显唇彩，不要真人皮肤纹理，不要真实人脸感。假发可以有真实纤维质感，但整体仍然保持animegao kigurumi风格。白色背景，干净商品图排版，高质量。`,
-        en: `Generate the final kigurumi head shell product-photo eight-view sheet based on the uploaded kigurumi shell design.\n\nOutput eight views: front, left 45-degree, left side, left rear 45-degree, back, right rear 45-degree, right side, and right 45-degree.\n\nReference roles:\n1. Kigurumi head shell design is the main basis for final shell structure, hairstyle, face shape, eyes, ears, and expression.\n2. Product photo examples are only for shooting quality, white-background product style, shell material, wig texture, and display method.\n3. Expression reference confirms eyebrow, gaze, and mouth emotion.\n\nRequirements: the final image must be a kigurumi head shell product-photo eight-view sheet. All eight views must show the same head shell as a continuous rotation, not eight different characters. Preserve the target character's hairstyle, ears, hair color, eye color, and temperament. Expression must match the reference, especially eyebrows, gaze, and mouth. The face shell should be smooth and hard, not overly sculpted. Weaken the nose and keep the mouth simple. Avoid obvious lip gloss, realistic skin texture, or real human face feeling. Wig may have realistic fiber texture while staying animegao kigurumi. White background, clean product layout, high quality.`
-      }
-    ]
-  }
-];
-
-const state = {
-  lang: "zh",
-  settings: {
-    apiBase: "",
-    apiKey: "",
-    imageModel: "gpt-image-2",
-    imageSize: "1024x1024",
-    imageCount: "1",
-    imageQuality: "high",
-    textApiBase: "",
-    textApiKey: "",
-    textModel: "gpt-4.1-mini"
-  },
-  results: { 1: [], 2: [], 3: [] },
-  selected: { 1: null, 2: null, 3: null }
-};
-
+/* Pipeline orchestration. Original stage 1–3 presets live in prompts.js. */
 const $ = (selector, root = document) => root.querySelector(selector);
-const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const definitions = [
+  {
+    title: "角色参考",
+    subtitle: "CHARACTER",
+    empty: "添加角色参考图",
+    roles: ["结构参考", "表情参考", "角色配色"],
+  },
+  {
+    title: "头壳设计",
+    subtitle: "SHELL DESIGN",
+    empty: "等待角色参考",
+    roles: ["头部主参考", "表情参考", "头壳风格"],
+  },
+  {
+    title: "商品成图",
+    subtitle: "PRODUCT",
+    empty: "等待头壳设计",
+    roles: ["头壳主参考", "商品摄影风格", "表情参考"],
+  },
+  {
+    title: "部件拆分",
+    subtitle: "COMPONENTS",
+    empty: "等待商品成图",
+    roles: ["成品主参考", "部件细节"],
+  },
+];
+const splitPrompts = {
+  face: "请根据上传的 kigurumi 成品照或商品多视图，提取同一头壳的独立前脸面壳。\n\n只输出一张正面单件商品照，背景为干净的浅灰色，完整轮廓居中，视角平正。保留成品的脸型、眼睛、固定表情、肤色、妆面、弱化的鼻子和简洁的嘴巴。对被假发遮住的面壳区域进行合理补全，呈现连续光滑的硬质面壳。\n\n画面只保留前脸部件。移除假发、发丝、刘海、头饰、后壳、脖子、支架与人体。避免真人皮肤纹理。不要添加标签、文字、拼图或多个视角。这张图将作为单个前脸模板的 3D 编辑参考。",
+  ornament:
+    "请根据上传的 kigurumi 成品照或商品多视图，提取用户指定的一个独立头饰。未指定时，选择画面中最显著的头饰。\n\n只输出一张该头饰的正面单件商品照，背景为干净的浅灰色，完整轮廓居中，保留它在原图中的材质、颜色、纹样、层叠和装配关系。被头发遮挡的部分适度补全，使它成为独立可辨认的部件。\n\n画面只保留这个头饰。移除头壳、面部、头发、假发、其他饰品、脖子和支架。不要把头发塑形成饰品。不要输出一组不同头饰、多个角度、标签或文字。这张图将作为单个头饰模板的 3D 编辑参考。",
+};
+const defaultSettings = {
+  apiBase: "https://api.openai.com/v1",
+  apiKey: "",
+  imageModel: "gpt-image-2",
+};
+const state = {
+  active: 1,
+  part: "face",
+  tab: "references",
+  settings: { ...defaultSettings },
+  entries: {},
+  runs: new Map(),
+};
+let database;
+let toastTimer;
+let persistChain = Promise.resolve();
+let autosaveTimer;
+const entryKey = (step = state.active, part = state.part) =>
+  step === 4 ? `4-${part}` : String(step);
+const current = () => state.entries[entryKey()];
+const selected = (step) =>
+  state.entries[entryKey(step)]?.results.find(
+    (item) => item.id === state.entries[entryKey(step)].selected,
+  );
+const defaultPrompt = (step, part = state.part) =>
+  step === 4 ? splitPrompts[part] : stages[step - 1].presets[0].zh;
+const emptyEntry = (step, part) => ({
+  prompt: defaultPrompt(step, part),
+  preset: "general",
+  notes: "",
+  files: [],
+  results: [],
+  selected: null,
+  carry: step > 1,
+  size: "1024x1024",
+  quality: "high",
+  count: 1,
+  error: "",
+  lastUpstream: null,
+});
 
-init();
-
-function init() {
-  loadState();
-  bindSettings();
-  renderStaticText();
-  renderStages();
-  bindHelper();
-  bindFirstVisitModal();
-  $("#langToggle").addEventListener("click", toggleLanguage);
-  $("#clearLocal").addEventListener("click", clearLocalData);
+function notify(message) {
+  const toast = $("#toast");
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.hidden = true;
+  }, 4500);
 }
 
-function loadState() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    Object.assign(state.settings, saved.settings || {});
-    state.lang = saved.lang || state.lang;
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
-  }
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("easykig-head-split", 1);
+    request.onupgradeneeded = () =>
+      request.result.createObjectStore("workspace");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
-function saveState() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      lang: state.lang,
-      settings: state.settings
-    })
+function storage(operation, value) {
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      "workspace",
+      operation === "get" ? "readonly" : "readwrite",
+    );
+    const store = transaction.objectStore("workspace");
+    const request =
+      operation === "get" ? store.get("project") : store.put(value, "project");
+    transaction.oncomplete = () => resolve(request.result);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+function persist() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    if (!database) return;
+    const snapshot = structuredClone({
+      active: state.active,
+      part: state.part,
+      entries: state.entries,
+      settings: state.settings,
+    });
+    $("#saveState").textContent = "保存中";
+    persistChain = persistChain
+      .catch(() => {})
+      .then(() => storage("put", snapshot))
+      .then(() => {
+        $("#saveState").textContent = "已保存到此浏览器";
+      })
+      .catch(() => {
+        $("#saveState").textContent = "本地存储已满";
+        notify("本地保存失败，请下载需要保留的图片。");
+      });
+  }, 250);
+}
+
+function image(src, alt = "") {
+  const node = document.createElement("img");
+  node.src = src;
+  node.alt = alt;
+  node.loading = "lazy";
+  node.referrerPolicy = "no-referrer";
+  return node;
+}
+
+function hasUpstreamChanged(step, entry) {
+  return (
+    step > 1 &&
+    entry.lastUpstream &&
+    selected(step - 1)?.id !== entry.lastUpstream
   );
 }
 
-function bindSettings() {
-  for (const key of Object.keys(state.settings)) {
-    const el = document.getElementById(key);
-    if (!el) continue;
-    el.value = state.settings[key];
-    el.addEventListener("input", () => {
-      state.settings[key] = el.value.trim();
-      updateApiStatus();
-      saveState();
-    });
-  }
-  bindImageModelMenu();
-  updateApiStatus();
+function statusText(step, entry) {
+  if (state.runs.has(entryKey(step))) return "生成中";
+  if (entry.error) return "需要重试";
+  if (hasUpstreamChanged(step, entry)) return "上游结果已更新";
+  return entry.results.length ? "已生成" : "待生成";
 }
 
-function bindImageModelMenu() {
-  const input = $("#imageModel");
-  const toggle = $("#imageModelToggle");
-  const menu = $("#imageModelMenu");
-  if (!input || !toggle || !menu) return;
-
-  menu.innerHTML = "";
-  imageModelPresets.forEach((model) => {
-    const option = document.createElement("button");
-    option.type = "button";
-    option.className = "model-menu-option";
-    option.textContent = model;
-    option.addEventListener("click", () => {
-      input.value = model;
-      state.settings.imageModel = model;
-      closeImageModelMenu();
-      saveState();
-      input.focus();
-    });
-    menu.appendChild(option);
-  });
-
-  toggle.addEventListener("click", () => {
-    const open = menu.hidden;
-    menu.hidden = !open;
-    toggle.setAttribute("aria-expanded", String(open));
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".model-combobox")) {
-      closeImageModelMenu();
-    }
-  });
-
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      menu.hidden = false;
-      toggle.setAttribute("aria-expanded", "true");
-      $(".model-menu-option", menu)?.focus();
-    } else if (event.key === "Escape") {
-      closeImageModelMenu();
-    }
-  });
+function elapsed(start) {
+  const seconds = Math.floor((Date.now() - start) / 1000);
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-function closeImageModelMenu() {
-  const menu = $("#imageModelMenu");
-  const toggle = $("#imageModelToggle");
-  if (!menu || !toggle) return;
-  menu.hidden = true;
-  toggle.setAttribute("aria-expanded", "false");
+function loadingNode(run) {
+  const overlay = document.createElement("div");
+  overlay.className = "loading-layer";
+  overlay.innerHTML =
+    '<span class="loading-ring" aria-hidden="true"></span><span>正在生成图像</span><div class="loading-bar" role="progressbar" aria-label="等待图像服务返回" aria-valuetext="生成中"></div><span class="elapsed"></span>';
+  $(".elapsed", overlay).textContent = `已用时 ${elapsed(run.start)}`;
+  return overlay;
 }
 
-function renderStaticText() {
-  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
-  $$("[data-i18n]").forEach((el) => {
-    el.textContent = t(el.dataset.i18n);
-  });
-  $$("[data-notice-text]").forEach((el) => {
-    renderNoticeText(el, el.dataset.noticeText);
-  });
-  $$("[data-i18n-placeholder]").forEach((el) => {
-    el.placeholder = t(el.dataset.i18nPlaceholder);
-  });
-  $("#langToggle").textContent = state.lang === "zh" ? "English" : "中文";
-  updateApiStatus();
-}
-
-function updateApiStatus() {
-  const status = $("#apiStatus");
-  const ready = Boolean(state.settings.apiKey);
-  status.classList.toggle("ready", ready);
-  status.textContent = ready ? t("apiStatusReady") : t("apiStatusMissing");
-}
-
-function renderStages() {
-  const host = $("#pipeline");
-  host.innerHTML = "";
-  for (const stage of stages) {
-    const node = $("#stageTemplate").content.firstElementChild.cloneNode(true);
-    node.dataset.stageId = stage.id;
-    $(".stage-number", node).textContent = stage.id;
-    $(".stage-kicker", node).textContent = stage.kicker[state.lang];
-    $(".stage-title", node).textContent = stage.title[state.lang];
-
-    const presetSelect = $(".preset-select", node);
-    for (const preset of stage.presets) {
-      const option = document.createElement("option");
-      option.value = preset.key;
-      option.textContent = preset.label[state.lang];
-      presetSelect.appendChild(option);
-    }
-
-    const promptInput = $(".prompt-input", node);
-    const setPrompt = () => {
-      const preset = stage.presets.find((item) => item.key === presetSelect.value);
-      promptInput.value = preset[state.lang];
-    };
-    presetSelect.addEventListener("change", setPrompt);
-    setPrompt();
-
-    renderReferenceGuidance(stage, node);
-    $(".run-stage", node).addEventListener("click", () => runStage(stage, node));
-    $(".copy-stage", node).addEventListener("click", async () => {
-      await navigator.clipboard.writeText(buildPrompt(node));
-      $(".stage-status", node).textContent = t("copied");
-    });
-
-    if (stage.id === 1) {
-      $(".carry-prev", node).closest("label").style.display = "none";
-    }
-
-    bindExclusiveCarryOptions(node);
-    updateDetailVisibility(node);
-
-    localizeNode(node);
-    $(".stage-status", node).textContent = t("noImage");
-    host.appendChild(node);
-    renderResults(stage.id);
-  }
-}
-
-function renderReferenceGuidance(stage, node) {
-  const guidance = referenceGuidance[stage.id];
-  const host = $(".reference-guidance", node);
-  host.innerHTML = "";
-
-  const slotGrid = document.createElement("div");
-  slotGrid.className = "slot-grid";
-  guidance.slots.forEach((slot, index) => {
-    slotGrid.appendChild(createUploadSlot(slot.title[state.lang], slot.help[state.lang], stage, node, false, stage.id > 1 && index === 0));
-  });
-
-  const otherSlot = createUploadSlot(t("otherRefs"), t("otherRefsHelp"), stage, node, true, false);
-
-  const warning = document.createElement("p");
-  warning.className = "reference-warning";
-  host.append(slotGrid, otherSlot, warning);
-  updatePreviousSlotState(node);
-  updateReferenceWarning(stage, node);
-}
-
-function createUploadSlot(titleText, helpText, stage, node, isWide, isPreviousCarrySlot) {
-  const card = document.createElement("div");
-  card.className = isWide ? "reference-slot upload-slot upload-slot-wide" : "reference-slot upload-slot";
-  card.dataset.role = titleText;
-  if (isPreviousCarrySlot) {
-    card.dataset.previousCarrySlot = "true";
-  }
-
-  const title = document.createElement("strong");
-  title.textContent = titleText;
-  const help = document.createElement("span");
-  help.textContent = helpText;
-
-  const inputId = `stage-${stage.id}-upload-${Math.random().toString(36).slice(2)}`;
-  const input = document.createElement("input");
-  input.id = inputId;
-  input.className = "slot-file-input";
-  input.type = "file";
-  input.accept = "image/*";
-  input.multiple = true;
-
-  const actions = document.createElement("div");
-  actions.className = "slot-actions";
-
+function cancelNode(run) {
   const button = document.createElement("button");
-  button.className = "upload-button";
-  button.type = "button";
-  button.textContent = t("uploadSlot");
-
-  const deleteButton = document.createElement("button");
-  deleteButton.className = "delete-upload-button is-hidden";
-  deleteButton.type = "button";
-  deleteButton.textContent = t("deleteSlot");
-
-  const uploadTip = document.createElement("span");
-  uploadTip.className = "upload-help-tip";
-  uploadTip.textContent = t("uploadHelp");
-
-  const preview = document.createElement("div");
-  preview.className = "slot-preview";
-  preview.setAttribute("aria-live", "polite");
-
-  const carryNote = document.createElement("p");
-  carryNote.className = "previous-carry-note";
-  carryNote.textContent = t("previousCarryNote");
-
-  button.addEventListener("click", () => input.click());
-  input.addEventListener("change", () => {
-    if (!input.files.length) return;
-    addFilesToSlot(card, [...input.files], stage, node);
-    input.value = "";
-  });
-  card.addEventListener("dragenter", (event) => {
-    if (isUploadSlotDisabled(card)) return;
-    event.preventDefault();
-    card.classList.add("drag-over");
-  });
-  card.addEventListener("dragover", (event) => {
-    if (isUploadSlotDisabled(card)) return;
-    event.preventDefault();
-    card.classList.add("drag-over");
-  });
-  card.addEventListener("dragleave", (event) => {
-    if (!card.contains(event.relatedTarget)) {
-      card.classList.remove("drag-over");
-    }
-  });
-  card.addEventListener("drop", (event) => {
-    if (isUploadSlotDisabled(card)) return;
-    event.preventDefault();
-    card.classList.remove("drag-over");
-    addFilesToSlot(card, [...event.dataTransfer.files], stage, node);
-  });
-  deleteButton.addEventListener("click", () => {
-    clearUploadSlot(card);
-    updateReferenceWarning(stage, node);
-  });
-
-  actions.append(button, deleteButton, uploadTip);
-  card.append(title, help, input, actions, preview, carryNote);
-  return card;
-}
-
-function bindFirstVisitModal() {
-  const modal = $("#firstVisitModal");
-  const dismiss = $("#firstVisitDismiss");
-  if (!modal || !dismiss || localStorage.getItem(FIRST_VISIT_KEY) === "true") return;
-  showFirstVisitModal();
-  dismiss.addEventListener("click", () => {
-    localStorage.setItem(FIRST_VISIT_KEY, "true");
-    modal.hidden = true;
-  });
-}
-
-function showFirstVisitModal() {
-  const modal = $("#firstVisitModal");
-  if (modal) modal.hidden = false;
-}
-
-function isUploadSlotDisabled(slot) {
-  const input = $(".slot-file-input", slot);
-  return Boolean(input?.disabled);
-}
-
-function addFilesToSlot(slot, files, stage, node) {
-  const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-  if (!imageFiles.length) return;
-  slot._files = [...(slot._files || []), ...imageFiles];
-  renderSlotPreview(slot, stage, node);
-  updateReferenceWarning(stage, node);
-}
-
-function updateReferenceWarning(stage, node) {
-  const guidance = referenceGuidance[stage.id];
-  const count = getStageReferenceFiles(node).length;
-  const warning = $(".reference-warning", node);
-  const ok = count >= guidance.min;
-  warning.classList.toggle("ok", ok);
-  if (state.lang === "zh") {
-    warning.textContent = ok
-      ? `已选择 ${count} 张参考图。建议范围：${guidance.min}-${guidance.max} 张。`
-      : `已选择 ${count} 张参考图。建议至少 ${guidance.min} 张，图片太少可能会降低结构、表情或风格稳定性。`;
-  } else {
-    warning.textContent = ok
-      ? `${count} reference image(s) selected. Recommended range: ${guidance.min}-${guidance.max}.`
-      : `${count} reference image(s) selected. Use at least ${guidance.min}; too few images may compromise structure, expression, or style stability.`;
-  }
-}
-
-function renderSlotPreview(slot, stage, node) {
-  const preview = $(".slot-preview", slot);
-  const button = $(".upload-button", slot);
-  const deleteButton = $(".delete-upload-button", slot);
-  const previousUrls = preview.dataset.objectUrls ? JSON.parse(preview.dataset.objectUrls) : [];
-  previousUrls.forEach((url) => URL.revokeObjectURL(url));
-
-  preview.innerHTML = "";
-  const urls = [];
-  (slot._files || []).forEach((file, index) => {
-    const url = URL.createObjectURL(file);
-    urls.push(url);
-
-    const item = document.createElement("figure");
-    item.className = "upload-thumb";
-
-    const image = document.createElement("img");
-    image.src = url;
-    image.alt = file.name;
-
-    const caption = document.createElement("span");
-    caption.title = file.name;
-    caption.textContent = file.name;
-
-    const removeButton = document.createElement("button");
-    removeButton.className = "remove-upload-button";
-    removeButton.type = "button";
-    removeButton.setAttribute("aria-label", `Remove ${file.name}`);
-    removeButton.textContent = "x";
-    removeButton.addEventListener("click", () => {
-      slot._files.splice(index, 1);
-      renderSlotPreview(slot, stage, node);
-      updateReferenceWarning(stage, node);
-    });
-
-    item.append(image, caption, removeButton);
-    preview.appendChild(item);
-  });
-  preview.dataset.objectUrls = JSON.stringify(urls);
-  const hasFiles = Boolean(slot._files?.length);
-  button.textContent = hasFiles ? t("replaceSlot") : t("uploadSlot");
-  deleteButton.classList.toggle("is-hidden", !hasFiles);
-}
-
-function clearUploadSlot(slot) {
-  const input = $(".slot-file-input", slot);
-  const preview = $(".slot-preview", slot);
-  const button = $(".upload-button", slot);
-  const deleteButton = $(".delete-upload-button", slot);
-  const previousUrls = preview.dataset.objectUrls ? JSON.parse(preview.dataset.objectUrls) : [];
-  previousUrls.forEach((url) => URL.revokeObjectURL(url));
-  input.value = "";
-  slot._files = [];
-  preview.innerHTML = "";
-  preview.dataset.objectUrls = "[]";
-  button.textContent = t("uploadSlot");
-  deleteButton.classList.add("is-hidden");
-}
-
-function getStageReferenceFiles(node) {
-  return getStageReferenceItems(node).map((item) => item.file);
-}
-
-function getStageReferenceItems(node) {
-  return $$(".upload-slot", node)
-    .filter((slot) => !$(".slot-file-input", slot).disabled)
-    .flatMap((slot) => (slot._files || []).map((file) => ({
-      file,
-      role: slot.dataset.role || t("otherRefs")
-    })));
-}
-
-function bindExclusiveCarryOptions(node) {
-  const carryPrev = $(".carry-prev", node);
-  const carryCurrent = $(".carry-current", node);
-  carryPrev.addEventListener("change", () => {
-    if (carryPrev.checked) carryCurrent.checked = false;
-    updateDetailVisibility(node);
-    updatePreviousSlotState(node);
-    updateReferenceSlotState(node);
-  });
-  carryCurrent.addEventListener("change", () => {
-    if (carryCurrent.checked) carryPrev.checked = false;
-    updateDetailVisibility(node);
-    updatePreviousSlotState(node);
-    updateReferenceSlotState(node);
-  });
-  $(".use-refinement-refs", node).addEventListener("change", () => {
-    updateReferenceSlotState(node);
-  });
-}
-
-function updatePreviousSlotState(node) {
-  if ($(".carry-current", node).checked) return;
-  const carryPrev = $(".carry-prev", node);
-  const slot = $('[data-previous-carry-slot="true"]', node);
-  if (!carryPrev || !slot) return;
-
-  const disabled = carryPrev.checked;
-  slot.classList.toggle("disabled", disabled);
-  $$(".slot-file-input", slot).forEach((input) => {
-    input.disabled = disabled;
-  });
-  $$(".upload-button", slot).forEach((button) => {
-    button.setAttribute("aria-disabled", String(disabled));
-  });
-}
-
-function updateReferenceSlotState(node) {
-  const carryCurrent = $(".carry-current", node);
-  const useRefinementRefs = $(".use-refinement-refs", node).checked;
-  const disabled = carryCurrent.checked && !useRefinementRefs;
-  $$(".upload-slot", node).forEach((slot) => {
-    slot.classList.toggle("disabled", disabled);
-    $$(".slot-file-input", slot).forEach((input) => {
-      input.disabled = disabled;
-    });
-    $$(".upload-button, .delete-upload-button", slot).forEach((button) => {
-      button.setAttribute("aria-disabled", String(disabled));
-    });
-  });
-  if (!disabled) {
-    updatePreviousSlotState(node);
-  }
-}
-
-function updateDetailVisibility(node) {
-  const detailLabel = $(".detail-input", node).closest("label");
-  const refinementRefsLabel = $(".use-refinement-refs", node).closest("label");
-  const promptInput = $(".prompt-input", node);
-  const carryCurrent = $(".carry-current", node);
-  const hasOutputs = Boolean(state.results[node.dataset.stageId]?.length);
-  carryCurrent.disabled = !hasOutputs;
-  if (!hasOutputs) carryCurrent.checked = false;
-  const isRefinement = carryCurrent.checked;
-  detailLabel.style.display = isRefinement ? "grid" : "none";
-  refinementRefsLabel.style.display = isRefinement ? "flex" : "none";
-  promptInput.disabled = isRefinement;
-  updateReferenceSlotState(node);
-}
-
-function localizeNode(root) {
-  $$("[data-i18n]", root).forEach((el) => {
-    el.textContent = t(el.dataset.i18n);
-  });
-  $$("[data-notice-text]", root).forEach((el) => {
-    renderNoticeText(el, el.dataset.noticeText);
-  });
-  $$("[data-i18n-placeholder]", root).forEach((el) => {
-    el.placeholder = t(el.dataset.i18nPlaceholder);
-  });
-}
-
-function bindHelper() {
-  $("#generatePrompt").addEventListener("click", generateHelperPrompt);
-  $("#copyHelperPrompt").addEventListener("click", async () => {
-    await navigator.clipboard.writeText($("#helperOutput").value);
-  });
-}
-
-function toggleLanguage() {
-  state.lang = state.lang === "zh" ? "en" : "zh";
-  saveState();
-  renderStaticText();
-  renderStages();
-}
-
-function clearLocalData() {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(FIRST_VISIT_KEY);
-  for (const key of Object.keys(state.settings)) {
-    state.settings[key] = key === "imageModel" ? "gpt-image-2" : key === "imageSize" ? "1024x1024" : key === "imageCount" ? "1" : key === "imageQuality" ? "high" : key === "textModel" ? "gpt-4.1-mini" : "";
-    const el = document.getElementById(key);
-    if (el) el.value = state.settings[key];
-  }
-  updateApiStatus();
-}
-
-function t(key) {
-  return dictionaries[state.lang][key] || dictionaries.en[key] || key;
-}
-
-function renderNoticeText(el, key) {
-  el.innerHTML = "";
-  const prefix = document.createElement("span");
-  prefix.className = "notice-prefix";
-  prefix.textContent = t("noticePrefix");
-  el.append(prefix, document.createTextNode(t(key)));
-}
-
-function formatElapsed(milliseconds) {
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
-
-function setResultsLoading(node, startTime, controller) {
-  const loading = $(".results-loading", node);
-  if (!loading) return;
-  loading.hidden = false;
-  loading.innerHTML = "";
-
-  const spinner = document.createElement("span");
-  spinner.className = "loading-spinner";
-  spinner.setAttribute("aria-hidden", "true");
-
-  const text = document.createElement("span");
-  text.textContent = `${t("running")} ${t("runningElapsed")} ${formatElapsed(Date.now() - startTime)}`;
-
-  const cancelButton = document.createElement("button");
-  cancelButton.className = "cancel-generation-button";
-  cancelButton.type = "button";
-  cancelButton.textContent = t("cancelGeneration");
-  cancelButton.addEventListener("click", () => {
-    showCancelInfo(loading);
-    controller.abort();
-  });
-
-  loading.append(spinner, text, cancelButton);
-}
-
-function showCancelInfo(loading) {
-  let panel = $(".cancel-info-panel", loading);
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.className = "cancel-info-panel";
-    loading.appendChild(panel);
-  }
-  renderNoticeText(panel, "runStageHelp");
-}
-
-function clearResultsLoading(node) {
-  const loading = $(".results-loading", node);
-  if (!loading) return;
-  loading.hidden = true;
-  loading.innerHTML = "";
-}
-
-function showResultsInfo(node, message) {
-  const loading = $(".results-loading", node);
-  if (!loading) return;
-  loading.hidden = false;
-  loading.innerHTML = "";
-
-  const panel = document.createElement("div");
-  panel.className = "cancel-info-panel";
-  renderNoticeText(panel, message);
-  loading.appendChild(panel);
-}
-
-function buildPrompt(stageNode) {
-  const prompt = $(".prompt-input", stageNode).value.trim();
-  const detail = $(".detail-input", stageNode).value.trim();
-  const isRefinement = $(".carry-current", stageNode).checked;
-  return isRefinement ? detail : prompt;
-}
-
-function buildFinalPrompt(prompt, referenceItems) {
-  if (!referenceItems.length) return prompt;
-
-  const groups = [];
-  referenceItems.forEach((item, index) => {
-    const previous = groups[groups.length - 1];
-    if (previous?.role === item.role) {
-      previous.end = index + 1;
-    } else {
-      groups.push({ role: item.role, start: index + 1, end: index + 1 });
-    }
-  });
-
-  const lines = groups.map((group) => {
-    const range = group.start === group.end ? `${group.start}` : `${group.start}-${group.end}`;
-    return `- Photos ${range} are ${group.role}.`;
-  });
-
-  const heading = state.lang === "zh"
-    ? "请严格按以下图像编号理解参考图分工："
-    : "Use this exact photo-role mapping for the uploaded images:";
-  return `${prompt}\n\n${heading}\n${lines.join("\n")}`;
-}
-
-async function runStage(stage, node) {
-  const status = $(".stage-status", node);
-  const button = $(".run-stage", node);
-  if (!state.settings.apiKey) {
-    status.textContent = t("missingKey");
-    return;
-  }
-
-  button.disabled = true;
-  const startTime = Date.now();
-  const controller = new AbortController();
-  let canceled = false;
-  status.textContent = "";
-  setResultsLoading(node, startTime, controller);
-  const timer = window.setInterval(() => setResultsLoading(node, startTime, controller), 1000);
-  try {
-    const prompt = buildPrompt(node);
-    if (!prompt) {
-      status.textContent = t("missingPrompt");
-      return;
-    }
-    const isRefinement = $(".carry-current", node).checked;
-    const useRefinementRefs = $(".use-refinement-refs", node).checked;
-    const uploadedItems = isRefinement && !useRefinementRefs ? [] : getStageReferenceItems(node);
-    const carryPrev = $(".carry-prev", node)?.checked && stage.id > 1 ? state.selected[stage.id - 1] : null;
-    const carryCurrent = $(".carry-current", node).checked ? state.selected[stage.id] : null;
-    const referenceItems = [...uploadedItems];
-    if (carryPrev) {
-      referenceItems.unshift({
-        file: await dataUrlToFile(carryPrev.src, `step-${stage.id - 1}-selected.png`),
-        role: state.lang === "zh" ? `Step ${stage.id - 1} 选中结果` : `Selected Step ${stage.id - 1} result`
-      });
-    }
-    if (carryCurrent) {
-      referenceItems.unshift({
-        file: await dataUrlToFile(carryCurrent.src, `step-${stage.id}-refinement.png`),
-        role: state.lang === "zh" ? `Step ${stage.id} 选中微调图` : `Selected Step ${stage.id} refinement image`
-      });
-    }
-
-    const finalPrompt = buildFinalPrompt(prompt, referenceItems);
-    const images = await requestImages(finalPrompt, referenceItems.map((item) => item.file), controller.signal);
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    images.forEach((src, index) => {
-      state.results[stage.id].unshift({
-        id: `${stage.id}-${stamp}-${index}`,
-        src,
-        prompt: finalPrompt
-      });
-    });
-    state.selected[stage.id] = state.results[stage.id][0] || null;
-    renderResults(stage.id);
-    status.textContent = t("done");
-  } catch (error) {
-    canceled = error.name === "AbortError";
-    if (canceled) {
-      status.textContent = t("canceled");
-      showResultsInfo(node, "runStageHelp");
-    } else {
-      status.textContent = `${t("failed")}${error.message}`;
-    }
-  } finally {
-    window.clearInterval(timer);
-    if (!canceled) clearResultsLoading(node);
-    button.disabled = false;
-  }
-}
-
-async function requestImages(prompt, references, signal) {
-  if (isNanoBananaModel(state.settings.imageModel)) {
-    return requestNanoBananaImages(prompt, references, signal);
-  }
-
-  const base = normalizeBase(state.settings.apiBase);
-  const headers = { Authorization: `Bearer ${state.settings.apiKey}` };
-  const n = clamp(parseInt(state.settings.imageCount, 10) || 1, 1, 4);
-  const quality = state.settings.imageQuality;
-  const size = state.settings.imageSize;
-  const imageFieldName = getOpenAIImageFieldName(base);
-
-  if (references.length) {
-    const form = new FormData();
-    form.append("model", state.settings.imageModel || "gpt-image-2");
-    form.append("prompt", prompt);
-    form.append("n", String(n));
-    if (size !== "auto") form.append("size", size);
-    if (quality !== "auto") form.append("quality", quality);
-    references.slice(0, 16).forEach((file) => {
-      form.append(imageFieldName, file, file.name);
-    });
-    const response = await fetch(`${base}/images/edits`, {
-      method: "POST",
-      headers,
-      body: form,
-      signal
-    });
-    return parseImageResponse(response);
-  }
-
-  headers["Content-Type"] = "application/json";
-  const body = {
-    model: state.settings.imageModel || "gpt-image-2",
-    prompt,
-    n
+  button.className = "cancel";
+  button.textContent = run.canceling ? "正在取消…" : "取消等待";
+  button.disabled = run.canceling;
+  button.onclick = () => {
+    run.canceling = true;
+    run.controller.abort();
+    renderPipeline();
+    renderMobilePreview();
   };
-  if (size !== "auto") body.size = size;
-  if (quality !== "auto") body.quality = quality;
-  const response = await fetch(`${base}/images/generations`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal
+  return button;
+}
+
+function renderPipeline() {
+  $("#pipeline").replaceChildren();
+  definitions.forEach((definition, index) => {
+    const step = index + 1;
+    const entry = state.entries[entryKey(step)];
+    const result = selected(step);
+    const run = state.runs.get(entryKey(step));
+    const article = document.createElement("article");
+    article.className = [
+      "stage",
+      state.active === step ? "active" : "",
+      result ? "has-result" : "",
+      run ? "busy" : "",
+      entry.error ? "failed" : "",
+    ].join(" ");
+    article.dataset.runKey = entryKey(step);
+    article.setAttribute("aria-busy", String(Boolean(run)));
+    const button = document.createElement("button");
+    button.className = "stage-open";
+    button.type = "button";
+    button.setAttribute("aria-label", `第 ${step} 步 ${definition.title}`);
+    button.setAttribute(
+      "aria-current",
+      state.active === step ? "step" : "false",
+    );
+    button.innerHTML = `<div class="stage-label"><span class="stage-number">${String(step).padStart(2, "0")}</span><div><span class="stage-name">${definition.title}</span></div></div><div class="stage-preview empty"></div><div class="stage-status"><span><i class="status-dot"></i><span class="status-text"></span></span><span class="result-total"></span></div>`;
+    const preview = $(".stage-preview", button);
+    if (result || entry.files[0]) {
+      preview.classList.remove("empty");
+      preview.append(
+        image(result?.src || entry.files[0].src, definition.title),
+      );
+    } else {
+      preview.innerHTML = `<div class="empty-content"><span class="empty-icon">${step === 1 ? "+" : "◇"}</span>${definition.empty}</div>`;
+    }
+    if (run) preview.append(loadingNode(run));
+    $(".status-text", button).textContent = statusText(step, entry);
+    $(".result-total", button).textContent = entry.results.length
+      ? `${entry.results.length} 张`
+      : "—";
+    button.onclick = () => {
+      state.active = step;
+      state.tab = "references";
+      render();
+      persist();
+    };
+    article.append(button);
+    if (run) article.append(cancelNode(run));
+    $("#pipeline").append(article);
   });
-  return parseImageResponse(response);
 }
 
-function isNanoBananaModel(model) {
-  const value = (model || "").trim().toLowerCase();
-  return value === "nano-banana"
-    || value === "gemini-2.5-flash-image"
-    || value === "gemini-2.5-flash-image-preview"
-    || value === "gemini-3.1-flash-image-preview"
-    || value === "gemini-3-pro-image-preview";
-}
-
-function normalizeNanoBananaModel(model) {
-  return (model || "").trim().toLowerCase() === "nano-banana" ? "gemini-2.5-flash-image" : (model || "gemini-2.5-flash-image").trim();
-}
-
-async function requestNanoBananaImages(prompt, references, signal) {
-  const base = normalizeGeminiBase(state.settings.apiBase);
-  const model = normalizeNanoBananaModel(state.settings.imageModel);
-  const n = clamp(parseInt(state.settings.imageCount, 10) || 1, 1, 4);
-  const parts = [{ text: prompt }];
-
-  for (const file of references.slice(0, 16)) {
-    parts.push({
-      inlineData: {
-        mimeType: file.type || "image/png",
-        data: await fileToBase64(file)
-      }
-    });
+function renderMobilePreview() {
+  const container = $("#mobilePreview");
+  container.replaceChildren();
+  const entry = current();
+  const result = selected(state.active);
+  if (result || entry.files[0]) {
+    const img = image(result?.src || entry.files[0].src, "当前步骤参考图");
+    img.onclick = () => previewImage(img.src);
+    container.append(img);
+  } else {
+    container.innerHTML = `<div class="empty-content"><span class="empty-icon">◇</span>${definitions[state.active - 1].empty}</div>`;
   }
+  const run = state.runs.get(entryKey());
+  if (run) container.append(loadingNode(run), cancelNode(run));
+}
 
-  const response = await fetch(`${base}/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": state.settings.apiKey
-    },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
-        candidateCount: n
-      }
-    }),
-    signal
+function renderReferences() {
+  const entry = current();
+  $("#carryWrap").hidden = state.active === 1;
+  $("#carry").checked = entry.carry;
+  const upstream =
+    state.active > 1 && entry.carry ? selected(state.active - 1) : null;
+  const carried = $("#carried");
+  carried.replaceChildren();
+  if (upstream) {
+    const img = image(upstream.src);
+    img.onclick = () => previewImage(upstream.src);
+    carried.append(
+      img,
+      document.createTextNode(`第 ${state.active - 1} 步 · 已选结果`),
+    );
+  }
+  $("#inputCount").textContent =
+    `${entry.files.length + Number(Boolean(upstream))} 张`;
+  const container = $("#uploads");
+  container.replaceChildren();
+  entry.files.forEach((file) => {
+    const item = document.createElement("div");
+    item.className = "upload-item";
+    const img = image(file.src);
+    img.onclick = () => previewImage(file.src);
+    const text = document.createElement("div");
+    const name = document.createElement("small");
+    name.textContent = file.name;
+    const role = document.createElement("select");
+    role.setAttribute("aria-label", `${file.name} 的参考用途`);
+    definitions[state.active - 1].roles.forEach((value) =>
+      role.add(new Option(value, value)),
+    );
+    role.value = file.role;
+    role.onchange = () => {
+      file.role = role.value;
+      persist();
+    };
+    const remove = document.createElement("button");
+    remove.className = "remove-file";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `移除 ${file.name}`);
+    remove.disabled = state.runs.has(entryKey());
+    const target = entryKey();
+    remove.onclick = () => {
+      state.entries[target].files = state.entries[target].files.filter(
+        (x) => x.id !== file.id,
+      );
+      renderReferences();
+      renderPipeline();
+      renderMobilePreview();
+      persist();
+    };
+    text.append(name, role);
+    item.append(img, text, remove);
+    container.append(item);
   });
-  return parseGeminiImageResponse(response);
 }
 
-async function parseGeminiImageResponse(response) {
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload.error?.message || `${response.status} ${response.statusText}`);
+function renderResults() {
+  const entry = current();
+  $("#resultCount").textContent = entry.results.length
+    ? `${entry.results.length} 张`
+    : "";
+  const message = $("#stageMessage");
+  message.textContent =
+    entry.error ||
+    (hasUpstreamChanged(state.active, entry)
+      ? "上一步已选择新的结果。可重新生成此步，以保持流程一致。"
+      : "");
+  message.classList.toggle("error", Boolean(entry.error));
+  const container = $("#results");
+  container.replaceChildren();
+  if (!entry.results.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-results";
+    empty.textContent = "生成后在这里选择一张图，继续下一步。";
+    container.append(empty);
   }
-  const images = (payload.candidates || [])
-    .flatMap((candidate) => candidate.content?.parts || [])
-    .map((part) => part.inlineData || part.inline_data)
-    .filter((data) => data?.data)
-    .map((data) => `data:${data.mimeType || data.mime_type || "image/png"};base64,${data.data}`);
-  if (!images.length) {
-    throw new Error("The Gemini response did not include images.");
-  }
-  return images;
+  entry.results.forEach((result) => {
+    const card = document.createElement("div");
+    card.className = `result-card ${entry.selected === result.id ? "selected" : ""}`;
+    const img = image(result.src, "生成结果");
+    img.onclick = () => previewImage(result.src);
+    const button = document.createElement("button");
+    button.textContent =
+      entry.selected === result.id ? "✓ 已选中" : "选用这张图";
+    button.setAttribute("aria-pressed", String(entry.selected === result.id));
+    button.onclick = () => {
+      entry.selected = result.id;
+      render();
+      persist();
+    };
+    card.append(img, button);
+    container.append(card);
+  });
+  $("#download").disabled = !selected(state.active);
 }
 
-async function parseImageResponse(response) {
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload.error?.message || `${response.status} ${response.statusText}`);
-  }
-  const data = payload.data || [];
-  const images = data
-    .map((item) => item.b64_json ? `data:image/png;base64,${item.b64_json}` : item.url)
-    .filter(Boolean);
-  if (!images.length) {
-    throw new Error("The API response did not include images.");
-  }
-  return images;
+function render() {
+  const entry = current();
+  const busy = state.runs.has(entryKey());
+  renderPipeline();
+  $("#workspaceTitle").textContent = definitions[state.active - 1].title;
+  $("#stepLabel").textContent =
+    `STEP ${String(state.active).padStart(2, "0")} / 04`;
+  $("#splitControl").hidden = state.active !== 4;
+  $("#presetWrap").hidden = state.active === 4;
+  const presets = $("#preset");
+  presets.replaceChildren();
+  if (state.active < 4)
+    stages[state.active - 1].presets.forEach((item) =>
+      presets.add(new Option(item.label.zh, item.key)),
+    );
+  presets.value = entry.preset;
+  $("#prompt").value = entry.prompt;
+  $("#notes").value = entry.notes;
+  $("#size").value = entry.size;
+  $("#quality").value = entry.quality;
+  $("#count").value = entry.count;
+  $("#run").disabled = busy;
+  $("#run").textContent = busy ? "正在生成…" : "生成当前步骤 →";
+  $$(
+    "#promptPane input, #promptPane textarea, #promptPane select, #resetPrompt, #upload, #carry",
+  ).forEach((node) => {
+    node.disabled = busy;
+  });
+  $$(".mobile-tabs button").forEach((node) =>
+    node.classList.toggle("active", node.dataset.tab === state.tab),
+  );
+  $$(".segmented button").forEach((node) =>
+    node.classList.toggle("active", node.dataset.part === state.part),
+  );
+  $(".workspace-body").dataset.view = state.tab;
+  $("#connectionDot").classList.toggle("ready", Boolean(state.settings.apiKey));
+  renderReferences();
+  renderResults();
+  renderMobilePreview();
 }
 
-function renderResults(stageId) {
-  const stageNode = $(`[data-stage-id="${stageId}"]`);
-  if (!stageNode) return;
-  updateDetailVisibility(stageNode);
-  updateReferenceSlotState(stageNode);
-  const grid = $(".result-grid", stageNode);
-  grid.innerHTML = "";
-  const results = state.results[stageId];
-  grid.classList.toggle("single-result-grid", results.length <= 1);
-  grid.classList.toggle("multi-result-grid", results.length > 1);
-  for (const result of results) {
-    const card = document.createElement("article");
-    card.className = "result-card";
-    card.classList.toggle("selected", state.selected[stageId]?.id === result.id);
-    const image = document.createElement("img");
-    image.src = result.src;
-    image.alt = `Step ${stageId} result`;
-
-    const actions = document.createElement("div");
-    actions.className = "result-actions";
-    const select = document.createElement("button");
-    select.type = "button";
-    const isSelected = state.selected[stageId]?.id === result.id;
-    select.classList.toggle("active", isSelected);
-    select.textContent = isSelected ? t("selected") : t("select");
-    select.addEventListener("click", () => {
-      state.selected[stageId] = result;
-      renderResults(stageId);
-    });
-
-    const download = document.createElement("a");
-    download.href = result.src;
-    download.download = `kigurumi-step-${stageId}-${result.id}.png`;
-    download.textContent = t("download");
-
-    actions.append(select, download);
-    card.append(image, actions);
-    grid.appendChild(card);
+async function addFiles(files) {
+  const target = entryKey();
+  const step = state.active;
+  if (state.runs.has(target)) return;
+  const entry = state.entries[target];
+  const accepted = [...files];
+  if (entry.files.length + accepted.length > 12)
+    return notify("每步最多添加 12 张参考图。");
+  if (
+    accepted.some(
+      (file) =>
+        !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+        file.size > 20 * 1024 * 1024,
+    )
+  )
+    return notify("请选择不超过 20 MB 的 PNG、JPEG 或 WebP 图片。");
+  try {
+    const items = await Promise.all(
+      accepted.map(async (file) => {
+        const src = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error("图片读取失败"));
+          reader.readAsDataURL(file);
+        });
+        return {
+          id: crypto.randomUUID(),
+          name: file.name,
+          src,
+          role: definitions[step - 1].roles[0],
+        };
+      }),
+    );
+    if (state.runs.has(target) || entry.files.length + items.length > 12)
+      return notify("生成已经开始或图片数量已满，请稍后添加。");
+    entry.files.push(...items);
+    render();
+    persist();
+  } catch (error) {
+    notify(error.message);
   }
 }
 
-async function generateHelperPrompt() {
-  const output = $("#helperOutput");
-  const button = $("#generatePrompt");
-  const apiKey = state.settings.textApiKey || state.settings.apiKey;
-  if (!apiKey) {
-    output.value = t("helperMissing");
+async function run() {
+  const step = state.active;
+  const target = entryKey();
+  const entry = state.entries[target];
+  if (state.runs.has(target)) return;
+  if (!state.settings.apiKey) {
+    openSettings();
     return;
   }
-  button.disabled = true;
-  output.value = t("helperRunning");
+  if (!entry.prompt.trim()) return notify("请填写提示词。");
+  const upstream = step > 1 && entry.carry ? selected(step - 1) : null;
+  const sources = upstream
+    ? [
+        {
+          ...upstream,
+          name: `step-${step - 1}.png`,
+          role: `第 ${step - 1} 步选中结果`,
+        },
+        ...entry.files,
+      ]
+    : [...entry.files];
+  if (!sources.length) return notify("请添加参考图，或先选择上一步的结果。");
+  const settings = {
+    ...state.settings,
+    imageSize: entry.size,
+    imageQuality: entry.quality,
+    imageCount: entry.count,
+  };
+  const prompt = [
+    entry.prompt,
+    entry.notes.trim() ? `本次修改要求\n${entry.notes.trim()}` : "",
+    `上传图片的分工\n${sources.map((file, index) => `${index + 1}. ${file.role}`).join("\n")}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const job = {
+    start: Date.now(),
+    controller: new AbortController(),
+    canceling: false,
+  };
+  state.runs.set(target, job);
+  entry.error = "";
+  render();
   try {
-    const stage = $("#helperStage").value;
-    const userContent = buildTroubleshootingRequest(stage);
-    const response = await fetch(`${normalizeBase(state.settings.textApiBase || state.settings.apiBase)}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: state.settings.textModel || "gpt-4.1-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You help rewrite image-generation prompts for an animegao kigurumi head workflow. Diagnose the issue briefly, then provide one stronger correction prompt. Keep the prompt concrete and avoid vague taste words."
-          },
-          { role: "user", content: userContent }
-        ],
-        temperature: 0.4
-      })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error?.message || `${response.status} ${response.statusText}`);
-    output.value = payload.choices?.[0]?.message?.content || "";
+    const files = await Promise.all(
+      sources.map((file) => dataUrlToFile(file.src, file.name)),
+    );
+    if (job.controller.signal.aborted)
+      throw new DOMException("Aborted", "AbortError");
+    const images = await requestImages(
+      prompt,
+      files,
+      job.controller.signal,
+      settings,
+    );
+    // A cancellation may race a provider response. The canceled request owns no results.
+    if (job.controller.signal.aborted)
+      throw new DOMException("Aborted", "AbortError");
+    const results = images.map((src) => ({
+      id: crypto.randomUUID(),
+      src,
+      prompt,
+    }));
+    entry.results.unshift(...results);
+    entry.selected = results[0].id;
+    entry.lastUpstream = upstream?.id || null;
+    if (entryKey() === target) state.tab = "results";
   } catch (error) {
-    output.value = `${t("failed")}${error.message}`;
+    entry.error =
+      error.name === "AbortError"
+        ? "已取消本地等待。服务端可能仍在生成并计费。"
+        : `生成失败，请检查连接后重试。${error.message}`;
   } finally {
-    button.disabled = false;
+    state.runs.delete(target);
+    render();
+    persist();
   }
 }
 
-function buildTroubleshootingRequest(stage) {
-  if (state.lang === "zh") {
-    return `我现在在执行 Step ${stage}。\n\n我上传的参考图包括：\n${$("#helperRefs").value.trim()}\n\n我使用的 Prompt 是：\n${$("#helperPrompt").value.trim()}\n\n生成结果哪里正确，希望保留：\n${$("#helperKeep").value.trim()}\n\n生成结果哪里错误，希望修改：\n${$("#helperFix").value.trim()}\n\n请帮我分析问题原因，并给出一版更强、更明确的修正 Prompt。`;
-  }
-  return `I am currently executing Step ${stage}.\n\nUploaded reference images and their roles:\n${$("#helperRefs").value.trim()}\n\nCurrent prompt:\n${$("#helperPrompt").value.trim()}\n\nWhat is correct and should be kept:\n${$("#helperKeep").value.trim()}\n\nWhat is wrong and should be fixed:\n${$("#helperFix").value.trim()}\n\nPlease diagnose the likely cause and provide one stronger, clearer correction prompt.`;
+function previewImage(src) {
+  $("#largeImage").src = src;
+  $("#imageDialog").showModal();
 }
 
-function normalizeBase(base) {
-  const clean = (base || "https://api.openai.com/v1").trim();
-  return clean.replace(/\/+$/, "");
-}
-
-function getOpenAIImageFieldName(base) {
+async function download() {
+  const result = selected(state.active);
+  if (!result) return;
   try {
-    const host = new URL(base).hostname.toLowerCase();
-    return host === "api.openai.com" ? "image[]" : "image";
+    const response = await fetch(result.src);
+    if (!response.ok) throw new Error("下载失败");
+    const blob = await response.blob();
+    const suffix =
+      blob.type === "image/jpeg"
+        ? "jpg"
+        : blob.type === "image/webp"
+          ? "webp"
+          : "png";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `easykig-step${state.active}${state.active === 4 ? "-" + state.part : ""}-${result.id.slice(0, 8)}.${suffix}`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   } catch {
-    return "image";
+    notify("无法直接下载，请在大图预览中保存原图。");
   }
 }
 
-function normalizeGeminiBase(base) {
-  const clean = (base || "https://generativelanguage.googleapis.com/v1beta").trim();
-  if (clean.includes("api.openai.com")) {
-    return "https://generativelanguage.googleapis.com/v1beta";
-  }
-  return clean.replace(/\/+$/, "");
+function openSettings() {
+  for (const key of Object.keys(defaultSettings))
+    $("#" + key).value = state.settings[key];
+  $("#settingsDialog").showModal();
 }
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-async function dataUrlToFile(dataUrl, name) {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  return new File([blob], name, { type: blob.type || "image/png" });
-}
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      resolve(String(reader.result).split(",")[1] || "");
-    });
-    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read image file.")));
-    reader.readAsDataURL(file);
+function bind() {
+  $("#run").onclick = run;
+  $("#download").onclick = download;
+  $("#settingsOpen").onclick = openSettings;
+  $("#settingsClose").onclick = () => $("#settingsDialog").close();
+  $("#imageClose").onclick = () => $("#imageDialog").close();
+  $("#connectionForm").onsubmit = (event) => {
+    event.preventDefault();
+    try {
+      const base = new URL($("#apiBase").value.trim());
+      if (!["http:", "https:"].includes(base.protocol))
+        throw new Error("请填写 HTTP 或 HTTPS API 地址。");
+      if (
+        base.protocol !== "https:" &&
+        !["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)
+      )
+        throw new Error("远端服务请填写 HTTPS 地址。");
+      if (base.username || base.password || base.search || base.hash)
+        throw new Error("服务地址请使用不含凭据和查询参数的 API 根路径。");
+      state.settings = Object.fromEntries(
+        Object.keys(defaultSettings).map((key) => [
+          key,
+          $("#" + key).value.trim(),
+        ]),
+      );
+      $("#settingsDialog").close();
+      render();
+      persist();
+    } catch (error) {
+      notify(error.message);
+    }
+  };
+  $("#upload").onchange = (event) => {
+    addFiles(event.target.files);
+    event.target.value = "";
+  };
+  const zone = $("#dropZone");
+  zone.ondragover = (event) => {
+    event.preventDefault();
+    zone.classList.add("dragover");
+  };
+  zone.ondragleave = () => zone.classList.remove("dragover");
+  zone.ondrop = (event) => {
+    event.preventDefault();
+    zone.classList.remove("dragover");
+    addFiles(event.dataTransfer.files);
+  };
+  zone.onkeydown = (event) => {
+    if (["Enter", " "].includes(event.key)) {
+      event.preventDefault();
+      $("#upload").click();
+    }
+  };
+  $("#carry").onchange = (event) => {
+    current().carry = event.target.checked;
+    renderReferences();
+    persist();
+  };
+  $("#preset").onchange = (event) => {
+    const entry = current();
+    entry.preset = event.target.value;
+    entry.prompt = stages[state.active - 1].presets.find(
+      (item) => item.key === entry.preset,
+    ).zh;
+    $("#prompt").value = entry.prompt;
+    persist();
+  };
+  $("#resetPrompt").onclick = () => {
+    if (!confirm("将当前提示词恢复为默认模板？")) return;
+    current().prompt = defaultPrompt(state.active);
+    current().preset = "general";
+    render();
+    persist();
+  };
+  for (const key of ["prompt", "notes", "size", "quality", "count"])
+    $("#" + key).oninput = (event) => {
+      current()[key] = event.target.value;
+      persist();
+    };
+  $$(".mobile-tabs button").forEach((button) => {
+    button.onclick = () => {
+      state.tab = button.dataset.tab;
+      render();
+    };
   });
+  $$(".segmented button").forEach((button) => {
+    button.onclick = () => {
+      state.part = button.dataset.part;
+      render();
+      persist();
+    };
+  });
+  setInterval(() => {
+    if (!state.runs.size) return;
+    $$(".stage .elapsed").forEach((node) => {
+      const job = state.runs.get(node.closest(".stage").dataset.runKey);
+      if (job) node.textContent = "已用时 " + elapsed(job.start);
+    });
+    const active = state.runs.get(entryKey());
+    if (active && $("#mobilePreview .elapsed"))
+      $("#mobilePreview .elapsed").textContent =
+        "已用时 " + elapsed(active.start);
+  }, 1000);
 }
+
+async function init() {
+  for (let step = 1; step <= 3; step++)
+    state.entries[String(step)] = emptyEntry(step);
+  for (const part of ["face", "ornament"])
+    state.entries[`4-${part}`] = emptyEntry(4, part);
+  try {
+    database = await openDatabase();
+    const saved = await storage("get");
+    if (saved) {
+      if (saved.entries)
+        for (const key of Object.keys(state.entries))
+          if (saved.entries[key])
+            Object.assign(state.entries[key], saved.entries[key]);
+      Object.assign(state.settings, saved.settings);
+      if ([1, 2, 3, 4].includes(saved.active)) state.active = saved.active;
+      if (["face", "ornament"].includes(saved.part)) state.part = saved.part;
+    } else {
+      const legacy = JSON.parse(
+        localStorage.getItem("kigurumi-head-studio-v1") || "{}",
+      );
+      for (const key of Object.keys(defaultSettings))
+        if (legacy.settings?.[key]) state.settings[key] = legacy.settings[key];
+    }
+    $("#saveState").textContent = "本地工作区";
+  } catch {
+    $("#saveState").textContent = "此会话不会自动保存";
+  }
+  bind();
+  render();
+}
+init();
